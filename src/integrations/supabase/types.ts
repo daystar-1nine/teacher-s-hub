@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          school_code: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          school_code: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          school_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           class_name: string
@@ -290,6 +329,92 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          metadata: Json | null
+          school_code: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          metadata?: Json | null
+          school_code: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          metadata?: Json | null
+          school_code?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_summaries: {
+        Row: {
+          created_at: string
+          generated_by: string
+          id: string
+          period_end: string
+          period_start: string
+          school_code: string
+          share_token: string | null
+          student_id: string
+          summary_content: Json
+        }
+        Insert: {
+          created_at?: string
+          generated_by: string
+          id?: string
+          period_end: string
+          period_start: string
+          school_code: string
+          share_token?: string | null
+          student_id: string
+          summary_content: Json
+        }
+        Update: {
+          created_at?: string
+          generated_by?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          school_code?: string
+          share_token?: string | null
+          student_id?: string
+          summary_content?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_summaries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -326,6 +451,51 @@ export type Database = {
         }
         Relationships: []
       }
+      question_papers: {
+        Row: {
+          class_name: string
+          created_at: string
+          created_by: string
+          difficulty: string
+          duration_minutes: number | null
+          id: string
+          questions: Json
+          school_code: string
+          subject: string
+          title: string
+          topic: string | null
+          total_marks: number
+        }
+        Insert: {
+          class_name: string
+          created_at?: string
+          created_by: string
+          difficulty?: string
+          duration_minutes?: number | null
+          id?: string
+          questions?: Json
+          school_code: string
+          subject: string
+          title: string
+          topic?: string | null
+          total_marks?: number
+        }
+        Update: {
+          class_name?: string
+          created_at?: string
+          created_by?: string
+          difficulty?: string
+          duration_minutes?: number | null
+          id?: string
+          questions?: Json
+          school_code?: string
+          subject?: string
+          title?: string
+          topic?: string | null
+          total_marks?: number
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           address: string | null
@@ -355,6 +525,153 @@ export type Database = {
           phone?: string | null
         }
         Relationships: []
+      }
+      student_badges: {
+        Row: {
+          badge_name: string
+          badge_type: string
+          description: string | null
+          earned_at: string
+          icon: string | null
+          id: string
+          metadata: Json | null
+          school_code: string
+          student_id: string
+        }
+        Insert: {
+          badge_name: string
+          badge_type: string
+          description?: string | null
+          earned_at?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json | null
+          school_code: string
+          student_id: string
+        }
+        Update: {
+          badge_name?: string
+          badge_type?: string
+          description?: string | null
+          earned_at?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json | null
+          school_code?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_value: number
+          deadline: string | null
+          description: string | null
+          goal_type: string
+          id: string
+          school_code: string
+          status: string
+          student_id: string
+          target_value: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          deadline?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          school_code: string
+          status?: string
+          student_id: string
+          target_value?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          deadline?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          school_code?: string
+          status?: string
+          student_id?: string
+          target_value?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_goals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_risk_scores: {
+        Row: {
+          created_at: string
+          factors: Json
+          id: string
+          last_analyzed_at: string
+          recommendations: Json | null
+          risk_level: string
+          risk_score: number
+          school_code: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          factors?: Json
+          id?: string
+          last_analyzed_at?: string
+          recommendations?: Json | null
+          risk_level?: string
+          risk_score?: number
+          school_code: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          factors?: Json
+          id?: string
+          last_analyzed_at?: string
+          recommendations?: Json | null
+          risk_level?: string
+          risk_score?: number
+          school_code?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_risk_scores_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
