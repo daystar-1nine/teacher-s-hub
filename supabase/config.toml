@@ -1,16 +1,16 @@
 project_id = "ubkcdrdetqjjynxtgdam"
 
 [functions.explain-topic]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-student-risk]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-parent-summary]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-question-paper]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-school-report]
-verify_jwt = false
+verify_jwt = true
