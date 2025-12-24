@@ -963,13 +963,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          school_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          school_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          school_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       has_permission: {
         Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
         Returns: boolean
       }
       is_school_admin: {
@@ -979,6 +1017,7 @@ export type Database = {
     }
     Enums: {
       admin_role: "super_admin" | "school_admin" | "teacher" | "student"
+      app_role: "admin" | "teacher" | "student"
       user_role: "teacher" | "student"
     }
     CompositeTypes: {
@@ -1108,6 +1147,7 @@ export const Constants = {
   public: {
     Enums: {
       admin_role: ["super_admin", "school_admin", "teacher", "student"],
+      app_role: ["admin", "teacher", "student"],
       user_role: ["teacher", "student"],
     },
   },
