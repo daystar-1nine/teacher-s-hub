@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sparkles,
   Send,
@@ -67,56 +66,42 @@ export default function Explain() {
 
     setIsLoading(true);
 
-    // Simulate AI response - in production, this would call Gemini API
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const { data, error } = await supabase.functions.invoke('explain-topic', {
+        body: { topic, mode }
+      });
 
-    const mockExplanation: Explanation = {
-      topic,
-      mode,
-      explanation: generateMockExplanation(topic, mode),
-      examples: generateMockExamples(topic, mode),
-      steps: generateMockSteps(topic, mode),
-      timestamp: new Date(),
-    };
+      if (error) {
+        console.error('Edge function error:', error);
+        toast.error(error.message || 'Failed to generate explanation');
+        setIsLoading(false);
+        return;
+      }
 
-    setCurrentExplanation(mockExplanation);
-    setHistory(prev => [mockExplanation, ...prev.slice(0, 9)]);
-    setIsLoading(false);
-    toast.success('Explanation generated!');
-  };
+      if (data.error) {
+        toast.error(data.error);
+        setIsLoading(false);
+        return;
+      }
 
-  const generateMockExplanation = (topic: string, mode: string): string => {
-    const explanations: Record<string, Record<string, string>> = {
-      beginner: {
-        default: `Let me explain "${topic}" in simple terms.\n\n${topic} is a fundamental concept that you'll encounter in your studies. Think of it like building blocks - each piece fits together to create a bigger picture.\n\nThe key thing to remember is that ${topic} helps us understand how things work in the world around us. It's like having a special pair of glasses that lets you see patterns and connections.`,
-      },
-      intermediate: {
-        default: `Here's a comprehensive explanation of "${topic}".\n\n${topic} is a multi-faceted concept that builds upon basic principles. At its core, it involves understanding the relationships between different components and how they interact.\n\nHistorically, ${topic} has been studied by scholars and practitioners who recognized its importance in solving real-world problems. Today, it remains relevant in various applications across different fields.`,
-      },
-      'exam-focused': {
-        default: `📚 EXAM GUIDE: ${topic}\n\n**Key Definition:**\n${topic} refers to the systematic study and application of core principles.\n\n**Important Points to Remember:**\n• This topic frequently appears in exams\n• Focus on understanding the "why" not just the "what"\n• Practice with past papers to reinforce concepts\n\n**Common Exam Questions:**\n1. Define and explain ${topic}\n2. Compare and contrast with related concepts\n3. Apply ${topic} to solve practical problems`,
-      },
-    };
+      const explanation: Explanation = {
+        topic: data.topic,
+        mode: data.mode,
+        explanation: data.explanation,
+        examples: data.examples || [],
+        steps: data.steps || [],
+        timestamp: new Date(),
+      };
 
-    return explanations[mode]?.default || explanations.beginner.default;
-  };
-
-  const generateMockExamples = (topic: string, mode: string): string[] => {
-    return [
-      `Example 1: Consider ${topic} in the context of everyday life. When you observe natural phenomena, you're actually seeing ${topic} in action.`,
-      `Example 2: In a classroom setting, ${topic} can be demonstrated through simple experiments that make the concept tangible and memorable.`,
-      `Example 3: Real-world applications of ${topic} include technology, science, and even art - showing how interconnected knowledge really is.`,
-    ];
-  };
-
-  const generateMockSteps = (topic: string, mode: string): string[] => {
-    return [
-      `Step 1: Start by understanding the basic definition of ${topic}. Write it down in your own words.`,
-      `Step 2: Identify the key components or elements that make up ${topic}. Create a mind map if helpful.`,
-      `Step 3: Look for connections between ${topic} and concepts you already know. This builds stronger memory.`,
-      `Step 4: Practice applying ${topic} to different scenarios. The more you practice, the better you understand.`,
-      `Step 5: Test yourself with questions and teach the concept to someone else - this is the best way to learn!`,
-    ];
+      setCurrentExplanation(explanation);
+      setHistory(prev => [explanation, ...prev.slice(0, 9)]);
+      toast.success('Explanation generated!');
+    } catch (error) {
+      console.error('Error generating explanation:', error);
+      toast.error('Failed to generate explanation. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyToClipboard = () => {
