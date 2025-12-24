@@ -1,31 +1,34 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  GraduationCap,
-  CalendarCheck,
-  ClipboardList,
-  BookOpen,
-  Sparkles,
-  MessageSquare,
-  Video,
-  Users,
-  ArrowRight,
-  CheckCircle2,
-} from 'lucide-react';
-
-const features = [
-  { icon: CalendarCheck, title: 'Attendance', description: 'Daily tracking with reports' },
-  { icon: ClipboardList, title: 'Exam Results', description: 'Performance analytics' },
-  { icon: BookOpen, title: 'Homework', description: 'Assignment management' },
-  { icon: Sparkles, title: 'AI Explain', description: 'Topic explanations' },
-  { icon: MessageSquare, title: 'Feedback', description: 'Anonymous & direct' },
-  { icon: Video, title: 'Google Meet', description: 'One-click join' },
-];
-
+import { GraduationCap, CalendarCheck, ClipboardList, BookOpen, Sparkles, MessageSquare, Video, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
+const features = [{
+  icon: CalendarCheck,
+  title: 'Attendance',
+  description: 'Daily tracking with reports'
+}, {
+  icon: ClipboardList,
+  title: 'Exam Results',
+  description: 'Performance analytics'
+}, {
+  icon: BookOpen,
+  title: 'Homework',
+  description: 'Assignment management'
+}, {
+  icon: Sparkles,
+  title: 'AI Explain',
+  description: 'Topic explanations'
+}, {
+  icon: MessageSquare,
+  title: 'Feedback',
+  description: 'Anonymous & direct'
+}, {
+  icon: Video,
+  title: 'Google Meet',
+  description: 'One-click join'
+}];
 export default function Index() {
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -61,15 +64,19 @@ export default function Index() {
           
           <h1 className="text-4xl md:text-6xl font-bold max-w-4xl mx-auto leading-tight animate-slide-up">
             Your Complete
-            <span className="gradient-primary bg-clip-text text-transparent"> Classroom </span>
+            <span className="gradient-primary bg-clip-text text-primary bg-secondary"> Classroom </span>
             Management Solution
           </h1>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mt-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mt-6 animate-slide-up" style={{
+          animationDelay: '100ms'
+        }}>
             Streamline attendance, homework, exams, and student management with AI-powered insights.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-slide-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-slide-up" style={{
+          animationDelay: '200ms'
+        }}>
             <Button size="xl" variant="gradient" asChild>
               <Link to="/auth">
                 Start Free <ArrowRight className="w-5 h-5 ml-2" />
@@ -80,9 +87,7 @@ export default function Index() {
             </Button>
           </div>
 
-          <p className="text-sm text-muted-foreground mt-6">
-            Demo: teacher@school.edu / student@school.edu (password: password123)
-          </p>
+          
         </div>
       </section>
 
@@ -95,13 +100,9 @@ export default function Index() {
           </p>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {features.map((feature, index) => (
-              <Card 
-                key={feature.title}
-                variant="interactive"
-                className="text-center animate-slide-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
+            {features.map((feature, index) => <Card key={feature.title} variant="interactive" className="text-center animate-slide-up" style={{
+            animationDelay: `${index * 100}ms`
+          }}>
                 <CardContent className="p-6">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <feature.icon className="w-6 h-6 text-primary" />
@@ -109,8 +110,7 @@ export default function Index() {
                   <h3 className="font-semibold">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -122,18 +122,10 @@ export default function Index() {
             <div>
               <h2 className="text-3xl font-bold mb-6">Built for Modern Education</h2>
               <div className="space-y-4">
-                {[
-                  'AI-powered topic explanations',
-                  'Real-time attendance tracking',
-                  'Comprehensive performance analytics',
-                  'Anonymous student feedback',
-                  'One-click Google Meet integration',
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3">
+                {['AI-powered topic explanations', 'Real-time attendance tracking', 'Comprehensive performance analytics', 'Anonymous student feedback', 'One-click Google Meet integration'].map(item => <div key={item} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                     <span>{item}</span>
-                  </div>
-                ))}
+                  </div>)}
               </div>
               <Button className="mt-8" variant="gradient" asChild>
                 <Link to="/auth">Get Started <ArrowRight className="w-4 h-4 ml-2" /></Link>
@@ -172,6 +164,5 @@ export default function Index() {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 }
