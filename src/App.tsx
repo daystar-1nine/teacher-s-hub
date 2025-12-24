@@ -21,6 +21,7 @@ import SchoolSettings from "./pages/SchoolSettings";
 import ClassManagement from "./pages/ClassManagement";
 import ActivityLogs from "./pages/ActivityLogs";
 import SchoolHealthReport from "./pages/SchoolHealthReport";
+import Announcements from "./pages/Announcements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/classes" element={<ClassManagement />} />
             <Route path="/activity-logs" element={<ActivityLogs />} />
             <Route path="/health-report" element={<SchoolHealthReport />} />
+            <Route path="/announcements" element={<Announcements />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
