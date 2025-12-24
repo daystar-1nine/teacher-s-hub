@@ -27,14 +27,14 @@ import {
 } from 'lucide-react';
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [feedback, setFeedback] = useLocalStorage<Feedback[]>('feedback_records', mockFeedback);
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState('General');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [teacherFeedback, setTeacherFeedback] = useState('');
 
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = profile?.role === 'teacher';
 
   const anonymousFeedback = feedback.filter(f => f.type === 'anonymous');
   const teacherFeedbackList = feedback.filter(f => f.type === 'teacher');
@@ -55,7 +55,7 @@ export default function FeedbackPage() {
       id: `fb-${Date.now()}`,
       type: 'anonymous',
       content: feedbackContent,
-      schoolCode: user?.schoolCode || '',
+      schoolCode: profile?.school_code || '',
       category: feedbackCategory,
       isRead: false,
       createdAt: new Date(),
@@ -78,8 +78,8 @@ export default function FeedbackPage() {
       type: 'teacher',
       content: teacherFeedback,
       studentId: selectedStudent,
-      teacherId: user?.id,
-      schoolCode: user?.schoolCode || '',
+      teacherId: profile?.user_id,
+      schoolCode: profile?.school_code || '',
       isRead: false,
       createdAt: new Date(),
     };

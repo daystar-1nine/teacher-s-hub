@@ -20,12 +20,11 @@ import {
 import { mockStudents, mockAttendance, mockHomework, mockHomeworkSubmissions, mockExamResults, mockFeedback } from '@/data/mockData';
 
 function TeacherDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   
   const todayDate = new Date().toISOString().split('T')[0];
   const todayAttendance = mockAttendance.filter(a => a.date === todayDate);
   const presentCount = todayAttendance.filter(a => a.status === 'present').length;
-  const absentCount = todayAttendance.filter(a => a.status === 'absent').length;
   
   const pendingSubmissions = mockHomeworkSubmissions.filter(s => s.status === 'pending').length;
   const unreadFeedback = mockFeedback.filter(f => !f.isRead).length;
@@ -44,13 +43,15 @@ function TeacherDashboard() {
     { icon: Sparkles, label: 'AI Explain Topic', href: '/explain', variant: 'gradient' as const },
   ];
 
+  const firstName = profile?.name?.split(' ')[0] || 'Teacher';
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user?.name?.split(' ')[0]}! 👋
+            Welcome back, {firstName}! 👋
           </h1>
           <p className="text-muted-foreground mt-1">
             Here's what's happening in your classes today.
@@ -197,7 +198,7 @@ function TeacherDashboard() {
 }
 
 function StudentDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   
   const studentExams = mockExamResults.filter(e => e.studentId === 'std-1');
   const averageScore = studentExams.length > 0 
@@ -226,13 +227,15 @@ function StudentDashboard() {
     { icon: Sparkles, label: 'Learn Topic', href: '/explain', variant: 'gradient' as const },
   ];
 
+  const firstName = profile?.name?.split(' ')[0] || 'Student';
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome, {user?.name?.split(' ')[0]}! 📚
+            Welcome, {firstName}! 📚
           </h1>
           <p className="text-muted-foreground mt-1">
             Keep up the great work! Here's your progress.
@@ -387,11 +390,11 @@ function StudentDashboard() {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   return (
     <DashboardLayout>
-      {user?.role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
+      {profile?.role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
     </DashboardLayout>
   );
 }

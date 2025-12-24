@@ -9,7 +9,6 @@ import {
   CalendarCheck,
   ClipboardList,
   BookOpen,
-  FileText,
   MessageSquare,
   Video,
   Sparkles,
@@ -39,13 +38,13 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { profile, logout } = useAuth();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const filteredNavItems = navItems.filter(item => 
-    user && item.roles.includes(user.role)
+    profile && item.roles.includes(profile.role)
   );
 
   const NavContent = () => (
@@ -105,16 +104,16 @@ export function Sidebar() {
         "border-t border-sidebar-border p-4",
         isCollapsed && "px-2"
       )}>
-        {!isCollapsed && user && (
+        {!isCollapsed && profile && (
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
               <span className="text-sm font-semibold text-sidebar-foreground">
-                {user.name.charAt(0)}
+                {profile.name?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{user.role}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile.name}</p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">{profile.role}</p>
             </div>
           </div>
         )}
