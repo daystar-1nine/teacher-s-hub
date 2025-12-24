@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export default function Meet() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [meetLinks, setMeetLinks] = useLocalStorage<GoogleMeetLink[]>('meet_links', mockMeetLinks);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   
@@ -34,10 +34,10 @@ export default function Meet() {
   const [formSubject, setFormSubject] = useState('');
   const [formLink, setFormLink] = useState('');
 
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = profile?.role === 'teacher';
 
   const myMeetLinks = meetLinks.filter(m => 
-    isTeacher ? m.teacherId === user?.id || m.teacherId === 'teacher-1' : m.isActive
+    isTeacher ? m.teacherId === profile?.user_id || m.teacherId === 'teacher-1' : m.isActive
   );
 
   const handleAddLink = () => {
@@ -57,8 +57,8 @@ export default function Meet() {
       className: formClass,
       subject: formSubject || undefined,
       meetLink: formLink,
-      teacherId: user?.id || '',
-      schoolCode: user?.schoolCode || '',
+      teacherId: profile?.user_id || '',
+      schoolCode: profile?.school_code || '',
       isActive: true,
       createdAt: new Date(),
     };

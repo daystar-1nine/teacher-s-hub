@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockStudents, mockExamResults, mockAttendance, mockHomeworkSubmissions } from '@/data/mockData';
 import {
@@ -16,14 +16,10 @@ import {
   Phone,
   Calendar,
   BookOpen,
-  TrendingUp,
-  CalendarCheck,
-  GraduationCap,
-  Filter,
 } from 'lucide-react';
 
 export default function Students() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<typeof mockStudents[0] | null>(null);

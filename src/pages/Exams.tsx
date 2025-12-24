@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function Exams() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [examResults, setExamResults] = useLocalStorage<ExamResult[]>('exam_results', mockExamResults);
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
@@ -40,7 +40,7 @@ export default function Exams() {
   const [formMarks, setFormMarks] = useState('');
   const [formTotalMarks, setFormTotalMarks] = useState('100');
 
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = profile?.role === 'teacher';
 
   const filteredResults = useMemo(() => {
     let results = examResults;
@@ -96,7 +96,7 @@ export default function Exams() {
       percentage,
       grade: getGrade(percentage),
       className: student?.className || '',
-      schoolCode: user?.schoolCode || '',
+      schoolCode: profile?.school_code || '',
       examDate: new Date(),
       createdAt: new Date(),
     };

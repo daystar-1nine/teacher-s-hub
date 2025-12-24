@@ -25,13 +25,13 @@ import {
 } from 'lucide-react';
 
 export default function Attendance() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [attendance, setAttendance] = useLocalStorage<AttendanceRecord[]>('attendance_records', mockAttendance);
   const [selectedClass, setSelectedClass] = useState('10-A');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [localAttendance, setLocalAttendance] = useState<Record<string, 'present' | 'absent' | 'late' | 'excused'>>({});
 
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = profile?.role === 'teacher';
 
   const classStudents = useMemo(() => 
     mockStudents.filter(s => s.className === selectedClass),
@@ -83,9 +83,9 @@ export default function Attendance() {
           studentId,
           date: selectedDate,
           status,
-          markedBy: user?.id || '',
+          markedBy: profile?.user_id || '',
           className: selectedClass,
-          schoolCode: user?.schoolCode || '',
+          schoolCode: profile?.school_code || '',
           createdAt: new Date(),
         });
       }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,13 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { GraduationCap, Mail, Lock, User, Building2, Chrome, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { UserRole } from '@/types';
+import { GraduationCap, Mail, Lock, User, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Auth() {
-  const { login, loginWithGoogle, signup, isAuthenticated, isLoading } = useAuth();
+  const { login, signup, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -26,6 +26,17 @@ export default function Auth() {
   const [signupName, setSignupName] = useState('');
   const [signupRole, setSignupRole] = useState<UserRole>('student');
   const [signupSchoolCode, setSignupSchoolCode] = useState('');
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full gradient-primary animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -39,7 +50,9 @@ export default function Auth() {
       return;
     }
 
+    setIsSubmitting(true);
     const result = await login(loginEmail, loginPassword);
+    setIsSubmitting(false);
     
     if (result.success) {
       toast.success('Welcome back!');
@@ -62,24 +75,15 @@ export default function Auth() {
       return;
     }
 
+    setIsSubmitting(true);
     const result = await signup(signupEmail, signupPassword, signupName, signupRole, signupSchoolCode);
+    setIsSubmitting(false);
     
     if (result.success) {
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } else {
       toast.error(result.error || 'Signup failed');
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    const result = await loginWithGoogle();
-    
-    if (result.success) {
-      toast.success('Welcome!');
-      navigate('/dashboard');
-    } else {
-      toast.error(result.error || 'Google login failed');
     }
   };
 
@@ -128,6 +132,7 @@ export default function Auth() {
                         className="pl-10"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -143,6 +148,7 @@ export default function Auth() {
                         className="pl-10 pr-10"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
@@ -154,8 +160,8 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" variant="gradient" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Signing in...
@@ -166,28 +172,8 @@ export default function Auth() {
                   </Button>
                 </form>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                  </div>
-                </div>
-
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                >
-                  <Chrome className="w-4 h-4 mr-2" />
-                  Google
-                </Button>
-
                 <p className="text-xs text-center text-muted-foreground mt-4">
-                  Demo: teacher@school.edu / student@school.edu (password: password123)
+                  Create an account using the Sign Up tab with school code: DEMO2024
                 </p>
               </TabsContent>
 
@@ -208,6 +194,7 @@ export default function Auth() {
                         className="pl-10"
                         value={signupName}
                         onChange={(e) => setSignupName(e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -223,6 +210,7 @@ export default function Auth() {
                         className="pl-10"
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -238,6 +226,7 @@ export default function Auth() {
                         className="pl-10 pr-10"
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
@@ -260,9 +249,10 @@ export default function Auth() {
                         className="pl-10 uppercase"
                         value={signupSchoolCode}
                         onChange={(e) => setSignupSchoolCode(e.target.value.toUpperCase())}
+                        disabled={isSubmitting}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">Try: DEMO2024</p>
+                    <p className="text-xs text-muted-foreground">Valid codes: DEMO2024, SCHOOL001, TEST123</p>
                   </div>
 
                   <div className="space-y-2">
@@ -271,6 +261,7 @@ export default function Auth() {
                       value={signupRole}
                       onValueChange={(value) => setSignupRole(value as UserRole)}
                       className="flex gap-4"
+                      disabled={isSubmitting}
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="student" id="role-student" />
@@ -283,8 +274,8 @@ export default function Auth() {
                     </RadioGroup>
                   </div>
 
-                  <Button type="submit" className="w-full" variant="gradient" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Creating account...
@@ -294,26 +285,6 @@ export default function Auth() {
                     )}
                   </Button>
                 </form>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-                  </div>
-                </div>
-
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                >
-                  <Chrome className="w-4 h-4 mr-2" />
-                  Google
-                </Button>
               </TabsContent>
             </CardContent>
           </Tabs>

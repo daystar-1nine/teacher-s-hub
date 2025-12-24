@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function HomeworkPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [homework, setHomework] = useLocalStorage<Homework[]>('homework_records', mockHomework);
   const [submissions, setSubmissions] = useLocalStorage<HomeworkSubmission[]>('homework_submissions', mockHomeworkSubmissions);
   const [selectedClass, setSelectedClass] = useState('all');
@@ -41,7 +41,7 @@ export default function HomeworkPage() {
   const [formClass, setFormClass] = useState('');
   const [formDueDate, setFormDueDate] = useState('');
 
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = profile?.role === 'teacher';
 
   const filteredHomework = useMemo(() => {
     return homework.filter(hw => {
@@ -64,8 +64,8 @@ export default function HomeworkPage() {
       subject: formSubject,
       className: formClass,
       dueDate: new Date(formDueDate),
-      assignedBy: user?.id || '',
-      schoolCode: user?.schoolCode || '',
+      assignedBy: profile?.user_id || '',
+      schoolCode: profile?.school_code || '',
       createdAt: new Date(),
     };
 

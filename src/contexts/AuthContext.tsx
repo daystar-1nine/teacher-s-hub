@@ -1,99 +1,116 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserRole } from '@/types';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+
+export type UserRole = 'teacher' | 'student';
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  school_code: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
+  profile: Profile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, name: string, role: UserRole, schoolCode: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
-  updateUser: (updates: Partial<User>) => void;
+  logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo users for testing
-const DEMO_USERS: User[] = [
-  {
-    id: 'teacher-1',
-    email: 'teacher@school.edu',
-    name: 'Ms. Sarah Johnson',
-    role: 'teacher',
-    schoolCode: 'DEMO2024',
-    createdAt: new Date(),
-    avatarUrl: undefined,
-  },
-  {
-    id: 'student-1',
-    email: 'student@school.edu',
-    name: 'Alex Thompson',
-    role: 'student',
-    schoolCode: 'DEMO2024',
-    createdAt: new Date(),
-    avatarUrl: undefined,
-  },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for saved session
-    const savedUser = localStorage.getItem('teachersdesk_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('teachersdesk_user');
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
+  const fetchProfile = async (userId: string) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Demo login
-      const demoUser = DEMO_USERS.find(u => u.email === email);
-      if (demoUser && password === 'password123') {
-        setUser(demoUser);
-        localStorage.setItem('teachersdesk_user', JSON.stringify(demoUser));
-        return { success: true };
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
       }
-      
-      // Check localStorage for registered users
-      const registeredUsers = JSON.parse(localStorage.getItem('teachersdesk_registered_users') || '[]');
-      const registeredUser = registeredUsers.find((u: User & { password: string }) => 
-        u.email === email && u.password === password
-      );
-      
-      if (registeredUser) {
-        const { password: _, ...userWithoutPassword } = registeredUser;
-        setUser(userWithoutPassword);
-        localStorage.setItem('teachersdesk_user', JSON.stringify(userWithoutPassword));
-        return { success: true };
-      }
-      
-      return { success: false, error: 'Invalid email or password' };
-    } finally {
-      setIsLoading(false);
+
+      return data as Profile | null;
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      return null;
     }
   };
 
-  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // Demo Google login - would normally redirect to Google OAuth
-      return { success: false, error: 'Google Sign-In requires backend configuration. Use email/password for demo.' };
-    } finally {
+  const refreshProfile = async () => {
+    if (user) {
+      const profileData = await fetchProfile(user.id);
+      setProfile(profileData);
+    }
+  };
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Defer profile fetch with setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            fetchProfile(session.user.id).then(setProfile);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id).then(setProfile);
+      }
+      
       setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
@@ -104,67 +121,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole, 
     schoolCode: string
   ): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Validate school code
-      const validSchoolCodes = ['DEMO2024', 'SCHOOL001', 'TEST123'];
-      if (!validSchoolCodes.includes(schoolCode.toUpperCase())) {
+      // First validate school code
+      const { data: school, error: schoolError } = await supabase
+        .from('schools')
+        .select('code')
+        .eq('code', schoolCode.toUpperCase())
+        .maybeSingle();
+
+      if (schoolError || !school) {
         return { success: false, error: 'Invalid school code. Try: DEMO2024' };
       }
-      
-      // Check if user already exists
-      const registeredUsers = JSON.parse(localStorage.getItem('teachersdesk_registered_users') || '[]');
-      if (registeredUsers.some((u: User) => u.email === email)) {
-        return { success: false, error: 'An account with this email already exists' };
-      }
-      
-      const newUser: User = {
-        id: `user-${Date.now()}`,
+
+      const redirectUrl = `${window.location.origin}/`;
+
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name,
-        role,
-        schoolCode: schoolCode.toUpperCase(),
-        createdAt: new Date(),
-      };
-      
-      // Save to localStorage
-      registeredUsers.push({ ...newUser, password });
-      localStorage.setItem('teachersdesk_registered_users', JSON.stringify(registeredUsers));
-      
-      setUser(newUser);
-      localStorage.setItem('teachersdesk_user', JSON.stringify(newUser));
-      
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name,
+            role,
+            school_code: schoolCode.toUpperCase(),
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          return { success: false, error: 'An account with this email already exists' };
+        }
+        return { success: false, error: error.message };
+      }
+
       return { success: true };
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('teachersdesk_user');
-  };
-
-  const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('teachersdesk_user', JSON.stringify(updatedUser));
-    }
+    setSession(null);
+    setProfile(null);
   };
 
   return (
     <AuthContext.Provider value={{
       user,
+      session,
+      profile,
       isLoading,
       isAuthenticated: !!user,
       login,
-      loginWithGoogle,
       signup,
       logout,
-      updateUser,
+      refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
