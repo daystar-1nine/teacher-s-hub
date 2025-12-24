@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,48 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error("Authentication failed:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if user is teacher or admin (only they can analyze student risk)
+    const { data: userRole } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!userRole || (userRole.role !== 'teacher' && userRole.role !== 'admin')) {
+      console.error("User is not authorized to analyze student risk:", user.id);
+      return new Response(JSON.stringify({ error: "Forbidden: Only teachers and admins can analyze student risk" }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Authenticated user: ${user.id} with role: ${userRole.role}`);
+
     const { studentData } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -96,7 +139,7 @@ Return ONLY a valid JSON object with risk_level, risk_score, factors, and recomm
     
     const riskAnalysis = JSON.parse(jsonMatch[0]);
     
-    console.log('Risk analysis completed for student:', studentData.name);
+    console.log('Risk analysis completed by user:', user.id, 'for student:', studentData.name);
 
     return new Response(JSON.stringify(riskAnalysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
