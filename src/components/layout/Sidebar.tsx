@@ -20,6 +20,7 @@ import {
   BarChart3,
   FileText,
   Command,
+  Megaphone,
 } from 'lucide-react';
 
 interface NavItem {
@@ -47,6 +48,7 @@ const navItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { icon: GraduationCap, label: 'Classes', href: '/classes', roles: ['teacher'] },
   { icon: BarChart3, label: 'Health Report', href: '/health-report', roles: ['teacher'], badge: 'AI' },
+  { icon: Megaphone, label: 'Announcements', href: '/announcements', roles: ['teacher'] },
 ];
 
 export function Sidebar() {
@@ -117,6 +119,55 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Admin Section */}
+        {profile?.role === 'teacher' && (
+          <>
+            {!isCollapsed && (
+              <div className="pt-4 pb-2 px-3">
+                <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">Admin</span>
+              </div>
+            )}
+            {adminItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
+                    isActive 
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md" 
+                      : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+                    isCollapsed && "justify-center px-2"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-transform duration-200",
+                    !isActive && "group-hover:scale-110"
+                  )} />
+                  {!isCollapsed && (
+                    <>
+                      <span className="font-medium flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                          item.badge === 'AI' ? "bg-accent text-accent-foreground" : "bg-success text-success-foreground"
+                        )}>
+                          {item.badge}
+                        </span>
+                      )}
+                      {isActive && (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </>
+                  )}
+                </Link>
+              );
+            })}
+          </>
+        )}
         
         {/* Keyboard shortcut hint */}
         {!isCollapsed && (
