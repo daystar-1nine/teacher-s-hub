@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -22,45 +22,115 @@ import {
   FileText,
   Command,
   Megaphone,
+  Settings,
+  Activity,
+  Shield,
 } from 'lucide-react';
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   href: string;
-  roles: ('teacher' | 'student')[];
+  roles: AppRole[];
   badge?: string;
 }
 
-const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard', roles: ['teacher', 'student'] },
-  { icon: Users, label: 'Students', href: '/students', roles: ['teacher'] },
-  { icon: CalendarCheck, label: 'Attendance', href: '/attendance', roles: ['teacher', 'student'] },
-  { icon: ClipboardList, label: 'Exams', href: '/exams', roles: ['teacher', 'student'] },
-  { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['teacher', 'student'] },
-  { icon: Sparkles, label: 'AI Explain', href: '/explain', roles: ['teacher', 'student'] },
-  { icon: FileText, label: 'Question Paper', href: '/question-paper', roles: ['teacher'], badge: 'AI' },
-  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['teacher'] },
-  { icon: MessageSquare, label: 'Feedback', href: '/feedback', roles: ['teacher', 'student'] },
-  { icon: Video, label: 'Meet', href: '/meet', roles: ['teacher', 'student'] },
+// Student navigation items
+const studentNavItems: NavItem[] = [
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/student-dashboard', roles: ['student'] },
+  { icon: CalendarCheck, label: 'My Attendance', href: '/attendance', roles: ['student'] },
+  { icon: ClipboardList, label: 'My Exams', href: '/exams', roles: ['student'] },
+  { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['student'] },
+  { icon: Sparkles, label: 'AI Explain', href: '/explain', roles: ['student'], badge: 'AI' },
+  { icon: MessageSquare, label: 'Feedback', href: '/feedback', roles: ['student'] },
+  { icon: Video, label: 'Join Class', href: '/meet', roles: ['student'] },
 ];
 
-// Admin items shown separately
-const adminItems: NavItem[] = [
+// Teacher navigation items
+const teacherNavItems: NavItem[] = [
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/teacher-dashboard', roles: ['teacher'] },
+  { icon: Users, label: 'Students', href: '/students', roles: ['teacher'] },
+  { icon: CalendarCheck, label: 'Attendance', href: '/attendance', roles: ['teacher'] },
+  { icon: ClipboardList, label: 'Exams', href: '/exams', roles: ['teacher'] },
+  { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['teacher'] },
+  { icon: Sparkles, label: 'AI Explain', href: '/explain', roles: ['teacher'], badge: 'AI' },
+  { icon: FileText, label: 'Question Paper', href: '/question-paper', roles: ['teacher'], badge: 'AI' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['teacher'] },
+  { icon: MessageSquare, label: 'Feedback', href: '/feedback', roles: ['teacher'] },
+  { icon: Video, label: 'Start Class', href: '/meet', roles: ['teacher'] },
+];
+
+// Teacher admin section
+const teacherAdminItems: NavItem[] = [
   { icon: GraduationCap, label: 'Classes', href: '/classes', roles: ['teacher'] },
-  { icon: BarChart3, label: 'Health Report', href: '/health-report', roles: ['teacher'], badge: 'AI' },
   { icon: Megaphone, label: 'Announcements', href: '/announcements', roles: ['teacher'] },
 ];
 
+// Admin navigation items
+const adminNavItems: NavItem[] = [
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/admin-dashboard', roles: ['admin'] },
+  { icon: Users, label: 'All Users', href: '/students', roles: ['admin'] },
+  { icon: GraduationCap, label: 'Classes', href: '/classes', roles: ['admin'] },
+  { icon: CalendarCheck, label: 'Attendance', href: '/attendance', roles: ['admin'] },
+  { icon: ClipboardList, label: 'Exams', href: '/exams', roles: ['admin'] },
+  { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['admin'] },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['admin'] },
+  { icon: Megaphone, label: 'Announcements', href: '/announcements', roles: ['admin'] },
+];
+
+// Admin tools section
+const adminToolItems: NavItem[] = [
+  { icon: Activity, label: 'Activity Logs', href: '/activity-logs', roles: ['admin'] },
+  { icon: Shield, label: 'Health Report', href: '/health-report', roles: ['admin'], badge: 'AI' },
+  { icon: Settings, label: 'Settings', href: '/settings', roles: ['admin'] },
+];
+
 export function Sidebar() {
-  const { profile, logout } = useAuth();
+  const { profile, appRole, logout } = useAuth();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const filteredNavItems = navItems.filter(item => 
-    profile && item.roles.includes(profile.role)
-  );
+  // Get navigation items based on role
+  const getNavItems = (): NavItem[] => {
+    switch (appRole) {
+      case 'admin':
+        return adminNavItems;
+      case 'teacher':
+        return teacherNavItems;
+      case 'student':
+      default:
+        return studentNavItems;
+    }
+  };
+
+  const getAdminSectionItems = (): NavItem[] => {
+    switch (appRole) {
+      case 'admin':
+        return adminToolItems;
+      case 'teacher':
+        return teacherAdminItems;
+      default:
+        return [];
+    }
+  };
+
+  const navItems = getNavItems();
+  const adminSectionItems = getAdminSectionItems();
+
+  const getRoleBadge = () => {
+    switch (appRole) {
+      case 'admin':
+        return { label: 'Admin', color: 'bg-destructive/10 text-destructive' };
+      case 'teacher':
+        return { label: 'Teacher', color: 'bg-primary/10 text-primary' };
+      case 'student':
+      default:
+        return { label: 'Student', color: 'bg-accent/10 text-accent' };
+    }
+  };
+
+  const roleBadge = getRoleBadge();
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
@@ -82,7 +152,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {filteredNavItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <Link
@@ -112,24 +182,24 @@ export function Sidebar() {
                       {item.badge}
                     </span>
                   )}
-                  {isActive && (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
+                  {isActive && <ChevronRight className="w-4 h-4" />}
                 </>
               )}
             </Link>
           );
         })}
 
-        {/* Admin Section */}
-        {profile?.role === 'teacher' && (
+        {/* Admin/Tools Section */}
+        {adminSectionItems.length > 0 && (
           <>
             {!isCollapsed && (
               <div className="pt-4 pb-2 px-3">
-                <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">Admin</span>
+                <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                  {appRole === 'admin' ? 'Admin Tools' : 'Management'}
+                </span>
               </div>
             )}
-            {adminItems.map((item) => {
+            {adminSectionItems.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
@@ -159,9 +229,7 @@ export function Sidebar() {
                           {item.badge}
                         </span>
                       )}
-                      {isActive && (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
+                      {isActive && <ChevronRight className="w-4 h-4" />}
                     </>
                   )}
                 </Link>
@@ -193,7 +261,9 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{profile.name}</p>
-              <p className="text-xs text-sidebar-foreground/60 capitalize">{profile.role}</p>
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", roleBadge.color)}>
+                {roleBadge.label}
+              </span>
             </div>
           </div>
         )}
