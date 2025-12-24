@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   LayoutDashboard,
   Users,
@@ -196,17 +197,23 @@ export function Sidebar() {
             </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-            isCollapsed && "justify-center px-2"
-          )}
-          onClick={logout}
-        >
-          <LogOut className="w-5 h-5" />
-          {!isCollapsed && <span className="ml-3">Sign Out</span>}
-        </Button>
+        <div className={cn(
+          "flex gap-2",
+          isCollapsed ? "flex-col items-center" : "items-center"
+        )}>
+          <ThemeToggle size="sm" className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
+          <Button
+            variant="ghost"
+            className={cn(
+              "flex-1 justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+              isCollapsed && "justify-center px-2 flex-none"
+            )}
+            onClick={logout}
+          >
+            <LogOut className="w-5 h-5" />
+            {!isCollapsed && <span className="ml-3">Sign Out</span>}
+          </Button>
+        </div>
       </div>
 
       {/* Collapse Toggle - Desktop Only */}

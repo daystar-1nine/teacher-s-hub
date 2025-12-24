@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   GraduationCap, 
   CalendarCheck, 
@@ -52,7 +54,8 @@ export default function Index() {
             </div>
             <span className="font-display font-bold text-xl text-gradient">Teacher's Desk</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" asChild className="hidden sm:flex">
               <Link to="/auth">Sign In</Link>
             </Button>
@@ -69,72 +72,86 @@ export default function Index() {
       <section className="pt-32 pb-24 px-4 relative">
         <div className="container mx-auto text-center relative z-10">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 text-sm font-medium mb-8 animate-bounce-in shadow-glow">
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-gradient">AI-Powered Education Platform</span>
-          </div>
+          <ScrollReveal animation="scale" duration={500}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 text-sm font-medium mb-8 shadow-glow">
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              <span className="text-gradient">AI-Powered Education Platform</span>
+            </div>
+          </ScrollReveal>
           
           {/* Main Heading */}
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-black max-w-5xl mx-auto leading-[1.1] animate-slide-up">
-            The Future of
-            <span className="block text-gradient-aurora">Classroom</span>
-            Management
-          </h1>
+          <ScrollReveal animation="fade-up" delay={100}>
+            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-black max-w-5xl mx-auto leading-[1.1]">
+              The Future of
+              <span className="block text-gradient-aurora">Classroom</span>
+              Management
+            </h1>
+          </ScrollReveal>
           
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mt-8 animate-slide-up delay-100">
-            Streamline attendance, homework, exams, and student management with 
-            <span className="text-primary font-semibold"> AI-powered insights</span>.
-          </p>
+          <ScrollReveal animation="fade-up" delay={200}>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mt-8">
+              Streamline attendance, homework, exams, and student management with 
+              <span className="text-primary font-semibold"> AI-powered insights</span>.
+            </p>
+          </ScrollReveal>
           
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12 animate-slide-up delay-200">
-            <Button size="xl" variant="gradient" asChild className="group">
-              <Link to="/auth" className="flex items-center gap-2">
-                Start Free 
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-            <Button size="xl" variant="neon-outline" asChild>
-              <Link to="/auth">Watch Demo</Link>
-            </Button>
-          </div>
+          <ScrollReveal animation="fade-up" delay={300}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+              <Button size="xl" variant="gradient" asChild className="group">
+                <Link to="/auth" className="flex items-center gap-2">
+                  Start Free 
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+              <Button size="xl" variant="neon-outline" asChild>
+                <Link to="/auth">Watch Demo</Link>
+              </Button>
+            </div>
+          </ScrollReveal>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto animate-slide-up delay-300">
-            {stats.map((stat, index) => (
+          <ScrollRevealGroup 
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto"
+            animation="fade-up"
+            staggerDelay={100}
+          >
+            {stats.map((stat) => (
               <div 
                 key={stat.label}
                 className="glass rounded-2xl p-6 text-center card-hover"
-                style={{ animationDelay: `${300 + index * 100}ms` }}
               >
                 <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
                 <p className="text-3xl md:text-4xl font-black text-gradient">{stat.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
               </div>
             ))}
-          </div>
+          </ScrollRevealGroup>
         </div>
       </section>
 
       {/* Features */}
       <section className="py-24 px-4 relative">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
+          <ScrollReveal animation="fade-up" className="text-center mb-16">
             <h2 className="font-display text-4xl md:text-5xl font-black mb-4">
               Everything You <span className="text-gradient-accent">Need</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-xl mx-auto">
               Comprehensive tools designed for modern education
             </p>
-          </div>
+          </ScrollReveal>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {features.map((feature, index) => (
+          <ScrollRevealGroup 
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+            animation="scale"
+            staggerDelay={80}
+          >
+            {features.map((feature) => (
               <Card 
                 key={feature.title}
-                className="glass border-border/50 text-center group cursor-pointer card-hover animate-slide-up"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="glass border-border/50 text-center group cursor-pointer card-hover"
               >
                 <CardContent className="p-6">
                   <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-glow transition-all duration-300">
@@ -145,7 +162,7 @@ export default function Index() {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </ScrollRevealGroup>
         </div>
       </section>
 
@@ -155,9 +172,11 @@ export default function Index() {
         <div className="container mx-auto max-w-6xl relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="font-display text-4xl md:text-5xl font-black mb-8">
-                Built for <span className="text-gradient-cyber">Modern</span> Education
-              </h2>
+              <ScrollReveal animation="fade-right">
+                <h2 className="font-display text-4xl md:text-5xl font-black mb-8">
+                  Built for <span className="text-gradient-cyber">Modern</span> Education
+                </h2>
+              </ScrollReveal>
               <div className="space-y-5">
                 {[
                   'AI-powered topic explanations in seconds',
@@ -166,50 +185,58 @@ export default function Index() {
                   'Anonymous student feedback system',
                   'Integrated video conferencing'
                 ].map((item, index) => (
-                  <div 
-                    key={item} 
-                    className="flex items-center gap-4 glass rounded-xl p-4 animate-slide-up"
-                    style={{ animationDelay: `${index * 100}ms` }}
+                  <ScrollReveal 
+                    key={item}
+                    animation="fade-right"
+                    delay={index * 100}
                   >
-                    <div className="w-10 h-10 rounded-xl gradient-success flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-5 h-5 text-success-foreground" />
+                    <div className="flex items-center gap-4 glass rounded-xl p-4">
+                      <div className="w-10 h-10 rounded-xl gradient-success flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-success-foreground" />
+                      </div>
+                      <span className="text-lg font-medium">{item}</span>
                     </div>
-                    <span className="text-lg font-medium">{item}</span>
-                  </div>
+                  </ScrollReveal>
                 ))}
               </div>
-              <Button className="mt-10" size="xl" variant="gradient-aurora" asChild>
-                <Link to="/auth" className="flex items-center gap-2">
-                  Get Started Now 
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              </Button>
+              <ScrollReveal animation="fade-up" delay={500}>
+                <Button className="mt-10" size="xl" variant="gradient-aurora" asChild>
+                  <Link to="/auth" className="flex items-center gap-2">
+                    Get Started Now 
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </Button>
+              </ScrollReveal>
             </div>
             
             {/* Visual Card Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="glass p-8 text-center card-hover animate-scale-in delay-100">
+            <ScrollRevealGroup 
+              className="grid grid-cols-2 gap-4"
+              animation="scale"
+              staggerDelay={150}
+            >
+              <Card className="glass p-8 text-center card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
                   <Users className="w-8 h-8 text-primary-foreground" />
                 </div>
                 <p className="text-4xl font-black text-gradient">500+</p>
                 <p className="text-muted-foreground mt-1">Active Schools</p>
               </Card>
-              <Card className="glass p-8 text-center card-hover animate-scale-in delay-200">
+              <Card className="glass p-8 text-center card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-accent flex items-center justify-center mx-auto mb-4 shadow-glow-accent">
                   <GraduationCap className="w-8 h-8 text-accent-foreground" />
                 </div>
                 <p className="text-4xl font-black text-gradient-accent">2K+</p>
                 <p className="text-muted-foreground mt-1">Teachers</p>
               </Card>
-              <Card className="glass p-8 text-center col-span-2 card-hover animate-scale-in delay-300">
+              <Card className="glass p-8 text-center col-span-2 card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-cyber flex items-center justify-center mx-auto mb-4 shadow-glow-cyan">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
                 <p className="text-4xl font-black text-gradient-cyber">1M+</p>
                 <p className="text-muted-foreground mt-1">AI Explanations Generated</p>
               </Card>
-            </div>
+            </ScrollRevealGroup>
           </div>
         </div>
       </section>
@@ -217,25 +244,27 @@ export default function Index() {
       {/* CTA Section */}
       <section className="py-24 px-4 relative">
         <div className="container mx-auto max-w-4xl text-center">
-          <div className="glass rounded-3xl p-12 md:p-16 border border-primary/20 shadow-glow">
-            <h2 className="font-display text-4xl md:text-5xl font-black mb-6">
-              Ready to <span className="text-gradient">Transform</span> Your Classroom?
-            </h2>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Join thousands of educators already using Teacher's Desk to create better learning experiences.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="xl" variant="gradient" asChild className="group">
-                <Link to="/auth" className="flex items-center gap-2">
-                  Start Free Trial
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="xl" variant="glass" asChild>
-                <Link to="/auth">Schedule Demo</Link>
-              </Button>
+          <ScrollReveal animation="scale">
+            <div className="glass rounded-3xl p-12 md:p-16 border border-primary/20 shadow-glow">
+              <h2 className="font-display text-4xl md:text-5xl font-black mb-6">
+                Ready to <span className="text-gradient">Transform</span> Your Classroom?
+              </h2>
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+                Join thousands of educators already using Teacher's Desk to create better learning experiences.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button size="xl" variant="gradient" asChild className="group">
+                  <Link to="/auth" className="flex items-center gap-2">
+                    Start Free Trial
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+                <Button size="xl" variant="glass" asChild>
+                  <Link to="/auth">Schedule Demo</Link>
+                </Button>
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 

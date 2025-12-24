@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useConfetti } from '@/hooks/useConfetti';
 import { Homework, HomeworkSubmission } from '@/types';
 import { mockStudents, mockHomework, mockHomeworkSubmissions, classOptions, subjectOptions } from '@/data/mockData';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ import {
 
 export default function HomeworkPage() {
   const { profile } = useAuth();
+  const confetti = useConfetti();
   const [homework, setHomework] = useLocalStorage<Homework[]>('homework_records', mockHomework);
   const [submissions, setSubmissions] = useLocalStorage<HomeworkSubmission[]>('homework_submissions', mockHomeworkSubmissions);
   const [selectedClass, setSelectedClass] = useState('all');
@@ -102,7 +104,9 @@ export default function HomeworkPage() {
           : sub
       )
     );
-    toast.success('Homework submitted successfully!');
+    // Trigger confetti celebration!
+    confetti.emoji();
+    toast.success('🎉 Homework submitted successfully!');
   };
 
   const getSubmissionStats = (homeworkId: string, className: string) => {
