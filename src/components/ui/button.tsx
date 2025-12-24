@@ -5,29 +5,37 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg active:scale-[0.98]",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md hover:shadow-lg active:scale-[0.98]",
-        outline: "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow-md active:scale-[0.98]",
-        ghost: "hover:bg-accent/10 hover:text-accent-foreground",
+        default: "bg-primary text-primary-foreground hover:shadow-glow hover:-translate-y-0.5",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-lg hover:-translate-y-0.5",
+        outline: "border-2 border-primary/30 bg-transparent text-foreground hover:bg-primary/10 hover:border-primary hover:shadow-glow",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-md hover:-translate-y-0.5",
+        ghost: "hover:bg-primary/10 hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
-        gradient: "gradient-primary text-primary-foreground shadow-md hover:shadow-glow hover:scale-[1.02] active:scale-[0.98]",
-        "gradient-accent": "gradient-accent text-accent-foreground shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
-        success: "bg-success text-success-foreground hover:bg-success/90 shadow-md hover:shadow-lg active:scale-[0.98]",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-md hover:shadow-lg active:scale-[0.98]",
+        // Gen Z Gradient variants
+        gradient: "gradient-primary text-primary-foreground shadow-lg hover:shadow-glow hover:scale-[1.02] hover:-translate-y-0.5",
+        "gradient-accent": "gradient-accent text-accent-foreground shadow-lg hover:shadow-glow-accent hover:scale-[1.02] hover:-translate-y-0.5",
+        "gradient-cyber": "gradient-cyber text-white shadow-lg hover:shadow-glow-cyan hover:scale-[1.02] hover:-translate-y-0.5",
+        "gradient-aurora": "gradient-aurora text-white shadow-lg hover:shadow-glow hover:scale-[1.02] hover:-translate-y-0.5",
+        success: "bg-success text-success-foreground hover:shadow-lg hover:-translate-y-0.5",
+        warning: "bg-warning text-warning-foreground hover:shadow-lg hover:-translate-y-0.5",
+        // Neon outline variants
+        "neon-outline": "border-2 border-primary bg-transparent text-primary hover:bg-primary/10 shadow-[0_0_10px_hsl(var(--primary)/0.3)] hover:shadow-glow",
+        "neon-outline-accent": "border-2 border-accent bg-transparent text-accent hover:bg-accent/10 shadow-[0_0_10px_hsl(var(--accent)/0.3)] hover:shadow-glow-accent",
+        // Glass variants
+        glass: "glass text-foreground hover:bg-card/90 backdrop-blur-xl hover:-translate-y-0.5",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
+        default: "h-11 px-5 py-2",
+        sm: "h-9 rounded-lg px-4 text-xs",
         lg: "h-12 rounded-xl px-8 text-base",
-        xl: "h-14 rounded-xl px-10 text-lg",
-        icon: "h-10 w-10",
-        "icon-sm": "h-8 w-8",
-        "icon-lg": "h-12 w-12",
+        xl: "h-14 rounded-2xl px-10 text-lg font-bold",
+        icon: "h-11 w-11 rounded-xl",
+        "icon-sm": "h-9 w-9 rounded-lg",
+        "icon-lg": "h-14 w-14 rounded-xl",
       },
     },
     defaultVariants: {
