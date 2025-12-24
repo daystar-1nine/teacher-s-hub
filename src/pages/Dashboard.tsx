@@ -16,8 +16,13 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import { mockStudents, mockAttendance, mockHomework, mockHomeworkSubmissions, mockExamResults, mockFeedback } from '@/data/mockData';
+import { QuickActionsPanel } from '@/components/dashboard/QuickActionsPanel';
+import { RiskAlertPanel } from '@/components/dashboard/RiskAlertPanel';
+import { NotificationsPanel } from '@/components/dashboard/NotificationsPanel';
 
 function TeacherDashboard() {
   const { profile } = useAuth();
@@ -36,17 +41,10 @@ function TeacherDashboard() {
     { icon: MessageSquare, label: 'New Feedback', value: unreadFeedback, color: 'bg-accent/10 text-accent', href: '/feedback' },
   ];
 
-  const quickActions = [
-    { icon: CalendarCheck, label: 'Mark Attendance', href: '/attendance', variant: 'default' as const },
-    { icon: ClipboardList, label: 'Add Exam Results', href: '/exams', variant: 'secondary' as const },
-    { icon: BookOpen, label: 'Assign Homework', href: '/homework', variant: 'secondary' as const },
-    { icon: Sparkles, label: 'AI Explain Topic', href: '/explain', variant: 'gradient' as const },
-  ];
-
   const firstName = profile?.name?.split(' ')[0] || 'Teacher';
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -57,12 +55,20 @@ function TeacherDashboard() {
             Here's what's happening in your classes today.
           </p>
         </div>
-        <Button variant="gradient" asChild>
-          <Link to="/meet">
-            <Video className="w-4 h-4 mr-2" />
-            Start Class
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </Link>
+          </Button>
+          <Button variant="gradient" asChild>
+            <Link to="/meet">
+              <Video className="w-4 h-4 mr-2" />
+              Start Class
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -91,27 +97,13 @@ function TeacherDashboard() {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {quickActions.map((action) => (
-              <Button key={action.label} variant={action.variant} asChild className="h-auto py-4 flex-col gap-2">
-                <Link to={action.href}>
-                  <action.icon className="w-5 h-5" />
-                  <span className="text-sm">{action.label}</span>
-                </Link>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quick Actions & Risk Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <QuickActionsPanel />
+        </div>
+        <RiskAlertPanel />
+      </div>
 
       {/* Recent Activity & Homework */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -293,6 +285,9 @@ function StudentDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Notifications */}
+      <NotificationsPanel />
 
       {/* Upcoming & Recent */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

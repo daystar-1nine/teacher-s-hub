@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CommandPalette } from "@/components/CommandPalette";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +15,8 @@ import Explain from "./pages/Explain";
 import Students from "./pages/Students";
 import Feedback from "./pages/Feedback";
 import Meet from "./pages/Meet";
+import Analytics from "./pages/Analytics";
+import QuestionPaper from "./pages/QuestionPaper";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <CommandPalette />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -36,6 +40,8 @@ const App = () => (
             <Route path="/students" element={<Students />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/meet" element={<Meet />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/question-paper" element={<QuestionPaper />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
