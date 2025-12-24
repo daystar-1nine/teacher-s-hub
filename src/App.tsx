@@ -17,6 +17,10 @@ import Feedback from "./pages/Feedback";
 import Meet from "./pages/Meet";
 import Analytics from "./pages/Analytics";
 import QuestionPaper from "./pages/QuestionPaper";
+import SchoolSettings from "./pages/SchoolSettings";
+import ClassManagement from "./pages/ClassManagement";
+import ActivityLogs from "./pages/ActivityLogs";
+import SchoolHealthReport from "./pages/SchoolHealthReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +46,10 @@ const App = () => (
             <Route path="/meet" element={<Meet />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/question-paper" element={<QuestionPaper />} />
+            <Route path="/settings" element={<SchoolSettings />} />
+            <Route path="/classes" element={<ClassManagement />} />
+            <Route path="/activity-logs" element={<ActivityLogs />} />
+            <Route path="/health-report" element={<SchoolHealthReport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

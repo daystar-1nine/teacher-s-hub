@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.generate-question-paper]
 verify_jwt = false
+
+[functions.generate-school-report]
+verify_jwt = false
