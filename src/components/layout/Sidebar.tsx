@@ -17,6 +17,9 @@ import {
   X,
   ChevronRight,
   GraduationCap,
+  BarChart3,
+  FileText,
+  Command,
 } from 'lucide-react';
 
 interface NavItem {
@@ -24,6 +27,7 @@ interface NavItem {
   label: string;
   href: string;
   roles: ('teacher' | 'student')[];
+  badge?: string;
 }
 
 const navItems: NavItem[] = [
@@ -33,6 +37,8 @@ const navItems: NavItem[] = [
   { icon: ClipboardList, label: 'Exams', href: '/exams', roles: ['teacher', 'student'] },
   { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['teacher', 'student'] },
   { icon: Sparkles, label: 'AI Explain', href: '/explain', roles: ['teacher', 'student'] },
+  { icon: FileText, label: 'Question Paper', href: '/question-paper', roles: ['teacher'], badge: 'AI' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['teacher'], badge: 'New' },
   { icon: MessageSquare, label: 'Feedback', href: '/feedback', roles: ['teacher', 'student'] },
   { icon: Video, label: 'Meet', href: '/meet', roles: ['teacher', 'student'] },
 ];
@@ -88,15 +94,31 @@ export function Sidebar() {
               )} />
               {!isCollapsed && (
                 <>
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                      item.badge === 'AI' ? "bg-accent text-accent-foreground" : "bg-success text-success-foreground"
+                    )}>
+                      {item.badge}
+                    </span>
+                  )}
                   {isActive && (
-                    <ChevronRight className="w-4 h-4 ml-auto" />
+                    <ChevronRight className="w-4 h-4" />
                   )}
                 </>
               )}
             </Link>
           );
         })}
+        
+        {/* Keyboard shortcut hint */}
+        {!isCollapsed && (
+          <div className="mt-4 px-3 py-2 text-xs text-sidebar-foreground/50 flex items-center gap-2">
+            <Command className="w-3 h-3" />
+            <span>Press <kbd className="px-1 py-0.5 rounded bg-sidebar-accent text-sidebar-foreground text-[10px]">⌘K</kbd> for quick access</span>
+          </div>
+        )}
       </nav>
 
       {/* User Section */}
