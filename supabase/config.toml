@@ -2,3 +2,12 @@ project_id = "ubkcdrdetqjjynxtgdam"
 
 [functions.explain-topic]
 verify_jwt = false
+
+[functions.analyze-student-risk]
+verify_jwt = false
+
+[functions.generate-parent-summary]
+verify_jwt = false
+
+[functions.generate-question-paper]
+verify_jwt = false
