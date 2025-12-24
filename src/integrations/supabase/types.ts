@@ -53,6 +53,54 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          attachments: string[] | null
+          content: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_published: boolean | null
+          priority: string | null
+          published_at: string | null
+          school_code: string
+          target_classes: string[] | null
+          target_type: string | null
+          title: string
+        }
+        Insert: {
+          attachments?: string[] | null
+          content: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          priority?: string | null
+          published_at?: string | null
+          school_code: string
+          target_classes?: string[] | null
+          target_type?: string | null
+          title: string
+        }
+        Update: {
+          attachments?: string[] | null
+          content?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          priority?: string | null
+          published_at?: string | null
+          school_code?: string
+          target_classes?: string[] | null
+          target_type?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           class_name: string
@@ -96,6 +144,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      classes: {
+        Row: {
+          capacity: number | null
+          class_teacher_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          room_number: string | null
+          school_code: string
+          section: string | null
+          subjects: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          class_teacher_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          room_number?: string | null
+          school_code: string
+          section?: string | null
+          subjects?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          class_teacher_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          room_number?: string | null
+          school_code?: string
+          section?: string | null
+          subjects?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       exam_results: {
         Row: {
@@ -496,6 +586,96 @@ export type Database = {
         }
         Relationships: []
       }
+      school_health_reports: {
+        Row: {
+          created_at: string
+          generated_by: string | null
+          id: string
+          insights: Json | null
+          metrics: Json | null
+          recommendations: Json | null
+          report_content: Json
+          report_month: string
+          school_code: string
+        }
+        Insert: {
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          insights?: Json | null
+          metrics?: Json | null
+          recommendations?: Json | null
+          report_content: Json
+          report_month: string
+          school_code: string
+        }
+        Update: {
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          insights?: Json | null
+          metrics?: Json | null
+          recommendations?: Json | null
+          report_content?: Json
+          report_month?: string
+          school_code?: string
+        }
+        Relationships: []
+      }
+      school_settings: {
+        Row: {
+          academic_year_end: string | null
+          academic_year_start: string | null
+          attendance_threshold: number | null
+          created_at: string
+          features_enabled: Json | null
+          grading_system: Json | null
+          holidays: Json | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          school_code: string
+          secondary_color: string | null
+          timezone: string | null
+          updated_at: string
+          working_days: string[] | null
+        }
+        Insert: {
+          academic_year_end?: string | null
+          academic_year_start?: string | null
+          attendance_threshold?: number | null
+          created_at?: string
+          features_enabled?: Json | null
+          grading_system?: Json | null
+          holidays?: Json | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          school_code: string
+          secondary_color?: string | null
+          timezone?: string | null
+          updated_at?: string
+          working_days?: string[] | null
+        }
+        Update: {
+          academic_year_end?: string | null
+          academic_year_start?: string | null
+          attendance_threshold?: number | null
+          created_at?: string
+          features_enabled?: Json | null
+          grading_system?: Json | null
+          holidays?: Json | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          school_code?: string
+          secondary_color?: string | null
+          timezone?: string | null
+          updated_at?: string
+          working_days?: string[] | null
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           address: string | null
@@ -744,14 +924,61 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          assigned_classes: string[] | null
+          assigned_subjects: string[] | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          permissions: Json | null
+          school_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          assigned_classes?: string[] | null
+          assigned_subjects?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          school_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          assigned_classes?: string[] | null
+          assigned_subjects?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          school_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      is_school_admin: {
+        Args: { _school_code: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      admin_role: "super_admin" | "school_admin" | "teacher" | "student"
       user_role: "teacher" | "student"
     }
     CompositeTypes: {
@@ -880,6 +1107,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["super_admin", "school_admin", "teacher", "student"],
       user_role: ["teacher", "student"],
     },
   },

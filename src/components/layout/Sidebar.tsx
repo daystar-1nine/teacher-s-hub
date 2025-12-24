@@ -38,9 +38,15 @@ const navItems: NavItem[] = [
   { icon: BookOpen, label: 'Homework', href: '/homework', roles: ['teacher', 'student'] },
   { icon: Sparkles, label: 'AI Explain', href: '/explain', roles: ['teacher', 'student'] },
   { icon: FileText, label: 'Question Paper', href: '/question-paper', roles: ['teacher'], badge: 'AI' },
-  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['teacher'], badge: 'New' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['teacher'] },
   { icon: MessageSquare, label: 'Feedback', href: '/feedback', roles: ['teacher', 'student'] },
   { icon: Video, label: 'Meet', href: '/meet', roles: ['teacher', 'student'] },
+];
+
+// Admin items shown separately
+const adminItems: NavItem[] = [
+  { icon: GraduationCap, label: 'Classes', href: '/classes', roles: ['teacher'] },
+  { icon: BarChart3, label: 'Health Report', href: '/health-report', roles: ['teacher'], badge: 'AI' },
 ];
 
 export function Sidebar() {
