@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Hook for role-based data access
@@ -9,162 +10,333 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export function useRoleBasedData() {
   const { user, profile, appRole, userRoleData } = useAuth();
+  const queryClient = useQueryClient();
 
   const schoolCode = profile?.school_code || userRoleData?.school_code;
 
-  /**
-   * Get students based on role
-   * - Student: Returns only their own student record
-   * - Teacher: Returns students in their school
-   * - Admin: Returns all students in their school
-   */
-  const getStudentsQuery = () => {
-    let query = supabase.from('students').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    // Students can only see their own record
-    if (appRole === 'student' && user) {
-      query = query.eq('user_id', user.id);
-    }
-    
-    return query;
+  // ==================== STUDENTS ====================
+  const studentsQuery = useQuery({
+    queryKey: ['students', schoolCode, appRole, user?.id],
+    queryFn: async () => {
+      let query = supabase.from('students').select('*');
+      
+      if (schoolCode) {
+        query = query.eq('school_code', schoolCode);
+      }
+      
+      if (appRole === 'student' && user) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query.order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
+
+  // ==================== CLASSES ====================
+  const classesQuery = useQuery({
+    queryKey: ['classes', schoolCode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('school_code', schoolCode!)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
+
+  // ==================== ATTENDANCE ====================
+  const getAttendanceQuery = (date?: string, className?: string) => {
+    return useQuery({
+      queryKey: ['attendance', schoolCode, date, className],
+      queryFn: async () => {
+        let query = supabase.from('attendance_records').select('*, students(name, roll_number)');
+        
+        if (schoolCode) query = query.eq('school_code', schoolCode);
+        if (date) query = query.eq('date', date);
+        if (className) query = query.eq('class_name', className);
+        
+        const { data, error } = await query.order('date', { ascending: false });
+        if (error) throw error;
+        return data || [];
+      },
+      enabled: !!schoolCode,
+    });
   };
 
-  /**
-   * Get attendance records based on role
-   * - Student: Only their own attendance
-   * - Teacher/Admin: All attendance in their school
-   */
-  const getAttendanceQuery = (studentId?: string) => {
-    let query = supabase.from('attendance_records').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    if (studentId) {
-      query = query.eq('student_id', studentId);
-    }
-    
-    return query;
+  const saveAttendanceMutation = useMutation({
+    mutationFn: async (records: { studentId: string; date: string; status: string; className: string }[]) => {
+      const formattedRecords = records.map(r => ({
+        student_id: r.studentId,
+        date: r.date,
+        status: r.status,
+        class_name: r.className,
+        school_code: schoolCode,
+        marked_by: user?.id,
+      }));
+
+      // Upsert attendance records
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .upsert(formattedRecords, { onConflict: 'student_id,date' })
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+
+  // ==================== HOMEWORK ====================
+  const homeworkQuery = useQuery({
+    queryKey: ['homework', schoolCode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('homework')
+        .select('*')
+        .eq('school_code', schoolCode!)
+        .order('due_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
+
+  const createHomeworkMutation = useMutation({
+    mutationFn: async (hw: { title: string; description: string; subject: string; className: string; dueDate: string }) => {
+      const { data, error } = await supabase
+        .from('homework')
+        .insert({
+          title: hw.title,
+          description: hw.description,
+          subject: hw.subject,
+          class_name: hw.className,
+          due_date: hw.dueDate,
+          school_code: schoolCode,
+          assigned_by: user?.id,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homework'] });
+    },
+  });
+
+  // ==================== HOMEWORK SUBMISSIONS ====================
+  const getHomeworkSubmissionsQuery = (homeworkId?: string) => {
+    return useQuery({
+      queryKey: ['homework_submissions', homeworkId],
+      queryFn: async () => {
+        let query = supabase.from('homework_submissions').select('*, students(name, roll_number), homework(title, subject)');
+        
+        if (homeworkId) query = query.eq('homework_id', homeworkId);
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+      },
+      enabled: !!homeworkId,
+    });
   };
 
-  /**
-   * Get exam results based on role
-   * - Student: Only their own results
-   * - Teacher/Admin: All results in their school
-   */
-  const getExamResultsQuery = (studentId?: string) => {
-    let query = supabase.from('exam_results').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    if (studentId) {
-      query = query.eq('student_id', studentId);
-    }
-    
-    return query;
-  };
+  const submitHomeworkMutation = useMutation({
+    mutationFn: async ({ homeworkId, studentId, content }: { homeworkId: string; studentId: string; content?: string }) => {
+      const { data, error } = await supabase
+        .from('homework_submissions')
+        .upsert({
+          homework_id: homeworkId,
+          student_id: studentId,
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+          content,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homework_submissions'] });
+    },
+  });
 
-  /**
-   * Get homework based on role
-   * - All roles can see homework for their school
-   */
-  const getHomeworkQuery = (className?: string) => {
-    let query = supabase.from('homework').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    if (className) {
-      query = query.eq('class_name', className);
-    }
-    
-    return query;
-  };
+  // ==================== EXAM RESULTS ====================
+  const examResultsQuery = useQuery({
+    queryKey: ['exam_results', schoolCode, appRole, user?.id],
+    queryFn: async () => {
+      let query = supabase.from('exam_results').select('*, students(name, roll_number, class_name)');
+      
+      if (schoolCode) query = query.eq('school_code', schoolCode);
+      
+      const { data, error } = await query.order('exam_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
 
-  /**
-   * Get homework submissions based on role
-   * - Student: Only their own submissions
-   * - Teacher/Admin: All submissions
-   */
-  const getHomeworkSubmissionsQuery = (studentId?: string, homeworkId?: string) => {
-    let query = supabase.from('homework_submissions').select('*');
-    
-    if (studentId) {
-      query = query.eq('student_id', studentId);
-    }
-    
-    if (homeworkId) {
-      query = query.eq('homework_id', homeworkId);
-    }
-    
-    return query;
-  };
+  const createExamResultMutation = useMutation({
+    mutationFn: async (result: { 
+      studentId: string; 
+      examName: string; 
+      subject: string; 
+      marksObtained: number; 
+      totalMarks: number; 
+      className: string;
+      examDate: string;
+    }) => {
+      const percentage = Math.round((result.marksObtained / result.totalMarks) * 100);
+      const grade = percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' : percentage >= 70 ? 'B+' : percentage >= 60 ? 'B' : percentage >= 50 ? 'C' : percentage >= 40 ? 'D' : 'F';
 
-  /**
-   * Get feedback based on role
-   * - Student: Only feedback addressed to them
-   * - Teacher/Admin: All feedback in their school
-   */
-  const getFeedbackQuery = () => {
-    let query = supabase.from('feedback').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    return query;
-  };
+      const { data, error } = await supabase
+        .from('exam_results')
+        .insert({
+          student_id: result.studentId,
+          exam_name: result.examName,
+          subject: result.subject,
+          marks_obtained: result.marksObtained,
+          total_marks: result.totalMarks,
+          percentage,
+          grade,
+          class_name: result.className,
+          school_code: schoolCode,
+          exam_date: result.examDate,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['exam_results'] });
+    },
+  });
 
-  /**
-   * Get classes based on role
-   * - All authenticated users can see classes in their school
-   */
-  const getClassesQuery = () => {
-    let query = supabase.from('classes').select('*');
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    return query;
-  };
+  // ==================== FEEDBACK ====================
+  const feedbackQuery = useQuery({
+    queryKey: ['feedback', schoolCode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('*, students(name)')
+        .eq('school_code', schoolCode!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
 
-  /**
-   * Get announcements based on role
-   * - All users see published announcements
-   */
-  const getAnnouncementsQuery = () => {
-    let query = supabase.from('announcements').select('*').eq('is_published', true);
-    
-    if (schoolCode) {
-      query = query.eq('school_code', schoolCode);
-    }
-    
-    return query;
-  };
+  const createFeedbackMutation = useMutation({
+    mutationFn: async (fb: { type: string; content: string; studentId?: string; category?: string }) => {
+      const { data, error } = await supabase
+        .from('feedback')
+        .insert({
+          type: fb.type,
+          content: fb.content,
+          student_id: fb.studentId,
+          teacher_id: fb.type === 'teacher' ? user?.id : null,
+          school_code: schoolCode,
+          category: fb.category,
+          is_read: false,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedback'] });
+    },
+  });
 
-  /**
-   * Check if user can perform an action
-   */
-  const canManageStudents = appRole === 'admin' || appRole === 'teacher';
-  const canManageClasses = appRole === 'admin' || appRole === 'teacher';
-  const canViewAnalytics = appRole === 'admin' || appRole === 'teacher';
-  const canManageSettings = appRole === 'admin';
-  const canViewActivityLogs = appRole === 'admin';
-  const canCreateAnnouncements = appRole === 'admin' || appRole === 'teacher';
-  const canGenerateReports = appRole === 'admin' || appRole === 'teacher';
+  const markFeedbackReadMutation = useMutation({
+    mutationFn: async (feedbackId: string) => {
+      const { error } = await supabase
+        .from('feedback')
+        .update({ is_read: true })
+        .eq('id', feedbackId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedback'] });
+    },
+  });
 
-  /**
-   * Get the student ID for the current user (if they are a student)
-   */
+  // ==================== MEET LINKS ====================
+  const meetLinksQuery = useQuery({
+    queryKey: ['meet_links', schoolCode, appRole, user?.id],
+    queryFn: async () => {
+      let query = supabase.from('meet_links').select('*');
+      
+      if (schoolCode) query = query.eq('school_code', schoolCode);
+      
+      // Teachers see their own links, students see active links
+      if (appRole === 'student') {
+        query = query.eq('is_active', true);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!schoolCode,
+  });
+
+  const createMeetLinkMutation = useMutation({
+    mutationFn: async (link: { className: string; subject?: string; meetLink: string }) => {
+      const { data, error } = await supabase
+        .from('meet_links')
+        .insert({
+          class_name: link.className,
+          subject: link.subject,
+          meet_link: link.meetLink,
+          teacher_id: user?.id,
+          school_code: schoolCode,
+          is_active: true,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meet_links'] });
+    },
+  });
+
+  const deleteMeetLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await supabase
+        .from('meet_links')
+        .delete()
+        .eq('id', linkId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meet_links'] });
+    },
+  });
+
+  // ==================== UTILITIES ====================
   const getStudentId = async (): Promise<string | null> => {
     if (appRole !== 'student' || !user) return null;
     
@@ -177,6 +349,13 @@ export function useRoleBasedData() {
     return data?.id || null;
   };
 
+  const getClassOptions = () => {
+    return classesQuery.data?.map(c => c.name) || [];
+  };
+
+  // Static subject list (could be fetched from DB in future)
+  const subjectOptions = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'Computer Science', 'History', 'Geography'];
+
   return {
     // Role info
     appRole,
@@ -186,25 +365,39 @@ export function useRoleBasedData() {
     isAdmin: appRole === 'admin',
     
     // Permission checks
-    canManageStudents,
-    canManageClasses,
-    canViewAnalytics,
-    canManageSettings,
-    canViewActivityLogs,
-    canCreateAnnouncements,
-    canGenerateReports,
+    canManageStudents: appRole === 'admin' || appRole === 'teacher',
+    canManageClasses: appRole === 'admin' || appRole === 'teacher',
+    canViewAnalytics: appRole === 'admin' || appRole === 'teacher',
+    canManageSettings: appRole === 'admin',
+    canViewActivityLogs: appRole === 'admin',
+    canCreateAnnouncements: appRole === 'admin' || appRole === 'teacher',
+    canGenerateReports: appRole === 'admin' || appRole === 'teacher',
     
-    // Query builders
-    getStudentsQuery,
+    // Data queries
+    studentsQuery,
+    classesQuery,
+    homeworkQuery,
+    examResultsQuery,
+    feedbackQuery,
+    meetLinksQuery,
+    
+    // Query functions (for dynamic params)
     getAttendanceQuery,
-    getExamResultsQuery,
-    getHomeworkQuery,
     getHomeworkSubmissionsQuery,
-    getFeedbackQuery,
-    getClassesQuery,
-    getAnnouncementsQuery,
+    
+    // Mutations
+    saveAttendanceMutation,
+    createHomeworkMutation,
+    submitHomeworkMutation,
+    createExamResultMutation,
+    createFeedbackMutation,
+    markFeedbackReadMutation,
+    createMeetLinkMutation,
+    deleteMeetLinkMutation,
     
     // Utilities
     getStudentId,
+    getClassOptions,
+    subjectOptions,
   };
 }

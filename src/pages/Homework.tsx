@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useConfetti } from '@/hooks/useConfetti';
-import { Homework, HomeworkSubmission } from '@/types';
-import { mockStudents, mockHomework, mockHomeworkSubmissions, classOptions, subjectOptions } from '@/data/mockData';
 import { toast } from 'sonner';
 import {
   BookOpen,
@@ -29,12 +28,21 @@ import {
 export default function HomeworkPage() {
   const { profile } = useAuth();
   const confetti = useConfetti();
-  const [homework, setHomework] = useLocalStorage<Homework[]>('homework_records', mockHomework);
-  const [submissions, setSubmissions] = useLocalStorage<HomeworkSubmission[]>('homework_submissions', mockHomeworkSubmissions);
+  const { 
+    homeworkQuery, 
+    studentsQuery, 
+    createHomeworkMutation, 
+    submitHomeworkMutation,
+    classesQuery,
+    subjectOptions,
+    getStudentId 
+  } = useRoleBasedData();
+
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedHomework, setSelectedHomework] = useState<Homework | null>(null);
+  const [selectedHomework, setSelectedHomework] = useState<any | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -44,85 +52,87 @@ export default function HomeworkPage() {
   const [formDueDate, setFormDueDate] = useState('');
 
   const isTeacher = profile?.role === 'teacher';
+  const homework = homeworkQuery.data || [];
+  const students = studentsQuery.data || [];
+  const classes = classesQuery.data || [];
+
+  useEffect(() => {
+    const fetchStudentId = async () => {
+      const id = await getStudentId();
+      setStudentId(id);
+    };
+    if (!isTeacher) {
+      fetchStudentId();
+    }
+  }, [isTeacher, getStudentId]);
 
   const filteredHomework = useMemo(() => {
     return homework.filter(hw => {
-      if (selectedClass !== 'all' && hw.className !== selectedClass) return false;
+      if (selectedClass !== 'all' && hw.class_name !== selectedClass) return false;
       if (selectedSubject !== 'all' && hw.subject !== selectedSubject) return false;
       return true;
     });
   }, [homework, selectedClass, selectedSubject]);
 
-  const handleAddHomework = () => {
+  const handleAddHomework = async () => {
     if (!formTitle || !formDescription || !formSubject || !formClass || !formDueDate) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    const newHomework: Homework = {
-      id: `hw-${Date.now()}`,
-      title: formTitle,
-      description: formDescription,
-      subject: formSubject,
-      className: formClass,
-      dueDate: new Date(formDueDate),
-      assignedBy: profile?.user_id || '',
-      schoolCode: profile?.school_code || '',
-      createdAt: new Date(),
-    };
-
-    setHomework(prev => [...prev, newHomework]);
-    
-    // Create pending submissions for all students in the class
-    const classStudents = mockStudents.filter(s => s.className === formClass);
-    const newSubmissions: HomeworkSubmission[] = classStudents.map(student => ({
-      id: `sub-${Date.now()}-${student.id}`,
-      homeworkId: newHomework.id,
-      studentId: student.id,
-      status: 'pending',
-      createdAt: new Date(),
-    }));
-    
-    setSubmissions(prev => [...prev, ...newSubmissions]);
-    
-    // Reset form
-    setFormTitle('');
-    setFormDescription('');
-    setFormSubject('');
-    setFormClass('');
-    setFormDueDate('');
-    setIsAddDialogOpen(false);
-    
-    toast.success('Homework assigned successfully!');
+    try {
+      await createHomeworkMutation.mutateAsync({
+        title: formTitle,
+        description: formDescription,
+        subject: formSubject,
+        className: formClass,
+        dueDate: formDueDate,
+      });
+      
+      setFormTitle('');
+      setFormDescription('');
+      setFormSubject('');
+      setFormClass('');
+      setFormDueDate('');
+      setIsAddDialogOpen(false);
+      
+      toast.success('Homework assigned successfully!');
+    } catch (error) {
+      toast.error('Failed to assign homework');
+    }
   };
 
-  const handleSubmit = (homeworkId: string) => {
-    setSubmissions(prev => 
-      prev.map(sub => 
-        sub.homeworkId === homeworkId && sub.studentId === 'std-1'
-          ? { ...sub, status: 'submitted', submittedAt: new Date() }
-          : sub
-      )
-    );
-    // Trigger confetti celebration!
-    confetti.emoji();
-    toast.success('🎉 Homework submitted successfully!');
+  const handleSubmit = async (homeworkId: string) => {
+    if (!studentId) {
+      toast.error('Student ID not found');
+      return;
+    }
+
+    try {
+      await submitHomeworkMutation.mutateAsync({ homeworkId, studentId });
+      confetti.emoji();
+      toast.success('🎉 Homework submitted successfully!');
+    } catch (error) {
+      toast.error('Failed to submit homework');
+    }
   };
 
-  const getSubmissionStats = (homeworkId: string, className: string) => {
-    const hwSubmissions = submissions.filter(s => s.homeworkId === homeworkId);
-    const classStudents = mockStudents.filter(s => s.className === className);
-    const submitted = hwSubmissions.filter(s => s.status !== 'pending').length;
-    return { submitted, total: classStudents.length };
-  };
-
-  const getStudentSubmission = (homeworkId: string) => {
-    return submissions.find(s => s.homeworkId === homeworkId && s.studentId === 'std-1');
-  };
-
-  const getDaysLeft = (dueDate: Date) => {
+  const getDaysLeft = (dueDate: string) => {
     return Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   };
+
+  if (homeworkQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-64" />)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -191,8 +201,8 @@ export default function HomeworkPage() {
                           <SelectValue placeholder="Select class" />
                         </SelectTrigger>
                         <SelectContent>
-                          {classOptions.map(c => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          {classes.map(c => (
+                            <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -207,8 +217,13 @@ export default function HomeworkPage() {
                       onChange={(e) => setFormDueDate(e.target.value)}
                     />
                   </div>
-                  <Button className="w-full" variant="gradient" onClick={handleAddHomework}>
-                    Assign Homework
+                  <Button 
+                    className="w-full" 
+                    variant="gradient" 
+                    onClick={handleAddHomework}
+                    disabled={createHomeworkMutation.isPending}
+                  >
+                    {createHomeworkMutation.isPending ? 'Assigning...' : 'Assign Homework'}
                   </Button>
                 </div>
               </DialogContent>
@@ -228,8 +243,8 @@ export default function HomeworkPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
-                    {classOptions.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {classes.map(c => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -252,10 +267,8 @@ export default function HomeworkPage() {
         {/* Homework List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredHomework.map((hw, index) => {
-            const daysLeft = getDaysLeft(hw.dueDate);
+            const daysLeft = getDaysLeft(hw.due_date);
             const isOverdue = daysLeft < 0;
-            const stats = getSubmissionStats(hw.id, hw.className);
-            const studentSubmission = !isTeacher ? getStudentSubmission(hw.id) : null;
 
             return (
               <Card 
@@ -269,7 +282,7 @@ export default function HomeworkPage() {
                     <Badge variant={isOverdue ? 'destructive' : 'default'}>
                       {hw.subject}
                     </Badge>
-                    <Badge variant="secondary">{hw.className}</Badge>
+                    <Badge variant="secondary">{hw.class_name}</Badge>
                   </div>
                   <CardTitle className="text-lg mt-2">{hw.title}</CardTitle>
                   <CardDescription className="line-clamp-2">{hw.description}</CardDescription>
@@ -279,7 +292,7 @@ export default function HomeworkPage() {
                     {/* Due Date */}
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>Due: {new Date(hw.dueDate).toLocaleDateString()}</span>
+                      <span>Due: {new Date(hw.due_date).toLocaleDateString()}</span>
                       <span className={`ml-auto font-medium ${
                         isOverdue ? 'text-destructive' :
                         daysLeft <= 2 ? 'text-warning' :
@@ -291,38 +304,24 @@ export default function HomeworkPage() {
                       </span>
                     </div>
 
-                    {/* Teacher View: Submission Stats */}
-                    {isTeacher && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-success rounded-full transition-all"
-                            style={{ width: `${(stats.submitted / stats.total) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {stats.submitted}/{stats.total}
-                        </span>
-                      </div>
-                    )}
-
                     {/* Student View: Status & Actions */}
-                    {!isTeacher && (
+                    {!isTeacher && studentId && (
                       <div className="flex items-center justify-between">
                         <div className={`flex items-center gap-2 ${
-                          studentSubmission?.status === 'submitted' ? 'text-success' :
                           isOverdue ? 'text-destructive' : 'text-warning'
                         }`}>
-                          {studentSubmission?.status === 'submitted' ? (
-                            <><CheckCircle2 className="w-4 h-4" /> Submitted</>
-                          ) : isOverdue ? (
+                          {isOverdue ? (
                             <><AlertCircle className="w-4 h-4" /> Overdue</>
                           ) : (
                             <><Clock className="w-4 h-4" /> Pending</>
                           )}
                         </div>
-                        {studentSubmission?.status === 'pending' && !isOverdue && (
-                          <Button size="sm" onClick={() => handleSubmit(hw.id)}>
+                        {!isOverdue && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleSubmit(hw.id)}
+                            disabled={submitHomeworkMutation.isPending}
+                          >
                             <Send className="w-4 h-4 mr-1" />
                             Submit
                           </Button>
@@ -365,37 +364,13 @@ export default function HomeworkPage() {
             <div className="space-y-4 mt-4">
               <div className="flex gap-2">
                 <Badge>{selectedHomework?.subject}</Badge>
-                <Badge variant="secondary">{selectedHomework?.className}</Badge>
+                <Badge variant="secondary">{selectedHomework?.class_name}</Badge>
               </div>
               <p className="text-muted-foreground">{selectedHomework?.description}</p>
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4" />
-                <span>Due: {selectedHomework?.dueDate && new Date(selectedHomework.dueDate).toLocaleDateString()}</span>
+                <span>Due: {selectedHomework?.due_date && new Date(selectedHomework.due_date).toLocaleDateString()}</span>
               </div>
-              
-              {isTeacher && selectedHomework && (
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3">Submissions</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {mockStudents
-                      .filter(s => s.className === selectedHomework.className)
-                      .map(student => {
-                        const sub = submissions.find(s => 
-                          s.homeworkId === selectedHomework.id && s.studentId === student.id
-                        );
-                        return (
-                          <div key={student.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                            <span>{student.name}</span>
-                            <Badge variant={sub?.status === 'submitted' ? 'default' : 'secondary'}>
-                              {sub?.status || 'pending'}
-                            </Badge>
-                          </div>
-                        );
-                      })
-                    }
-                  </div>
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>
