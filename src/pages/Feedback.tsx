@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,9 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { Feedback } from '@/types';
-import { mockFeedback, mockStudents } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   MessageSquare,
@@ -18,7 +17,6 @@ import {
   Eye,
   EyeOff,
   User,
-  Clock,
   CheckCircle2,
   MessageCircle,
   ThumbsUp,
@@ -28,72 +26,73 @@ import {
 
 export default function FeedbackPage() {
   const { profile } = useAuth();
-  const [feedback, setFeedback] = useLocalStorage<Feedback[]>('feedback_records', mockFeedback);
+  const { 
+    feedbackQuery, 
+    studentsQuery, 
+    createFeedbackMutation, 
+    markFeedbackReadMutation 
+  } = useRoleBasedData();
+
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState('General');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [teacherFeedback, setTeacherFeedback] = useState('');
 
   const isTeacher = profile?.role === 'teacher';
+  const feedback = feedbackQuery.data || [];
+  const students = studentsQuery.data || [];
 
   const anonymousFeedback = feedback.filter(f => f.type === 'anonymous');
   const teacherFeedbackList = feedback.filter(f => f.type === 'teacher');
-  const myFeedback = feedback.filter(f => 
-    (f.type === 'teacher' && f.studentId === 'std-1') ||
-    (f.type === 'anonymous' && f.studentId === 'std-1')
-  );
 
   const categories = ['General', 'Praise', 'Suggestion', 'Concern', 'Question'];
 
-  const handleSubmitAnonymous = () => {
+  const handleSubmitAnonymous = async () => {
     if (!feedbackContent.trim()) {
       toast.error('Please enter your feedback');
       return;
     }
 
-    const newFeedback: Feedback = {
-      id: `fb-${Date.now()}`,
-      type: 'anonymous',
-      content: feedbackContent,
-      schoolCode: profile?.school_code || '',
-      category: feedbackCategory,
-      isRead: false,
-      createdAt: new Date(),
-    };
-
-    setFeedback(prev => [...prev, newFeedback]);
-    setFeedbackContent('');
-    setFeedbackCategory('General');
-    toast.success('Feedback submitted anonymously!');
+    try {
+      await createFeedbackMutation.mutateAsync({
+        type: 'anonymous',
+        content: feedbackContent,
+        category: feedbackCategory,
+      });
+      setFeedbackContent('');
+      setFeedbackCategory('General');
+      toast.success('Feedback submitted anonymously!');
+    } catch (error) {
+      toast.error('Failed to submit feedback');
+    }
   };
 
-  const handleSubmitTeacherFeedback = () => {
+  const handleSubmitTeacherFeedback = async () => {
     if (!selectedStudent || !teacherFeedback.trim()) {
       toast.error('Please select a student and enter feedback');
       return;
     }
 
-    const newFeedback: Feedback = {
-      id: `fb-${Date.now()}`,
-      type: 'teacher',
-      content: teacherFeedback,
-      studentId: selectedStudent,
-      teacherId: profile?.user_id,
-      schoolCode: profile?.school_code || '',
-      isRead: false,
-      createdAt: new Date(),
-    };
-
-    setFeedback(prev => [...prev, newFeedback]);
-    setTeacherFeedback('');
-    setSelectedStudent('');
-    toast.success('Feedback sent to student!');
+    try {
+      await createFeedbackMutation.mutateAsync({
+        type: 'teacher',
+        content: teacherFeedback,
+        studentId: selectedStudent,
+      });
+      setTeacherFeedback('');
+      setSelectedStudent('');
+      toast.success('Feedback sent to student!');
+    } catch (error) {
+      toast.error('Failed to send feedback');
+    }
   };
 
-  const markAsRead = (feedbackId: string) => {
-    setFeedback(prev => 
-      prev.map(f => f.id === feedbackId ? { ...f, isRead: true } : f)
-    );
+  const markAsRead = async (feedbackId: string) => {
+    try {
+      await markFeedbackReadMutation.mutateAsync(feedbackId);
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
   };
 
   const getCategoryIcon = (category?: string) => {
@@ -113,6 +112,20 @@ export default function FeedbackPage() {
       default: return 'bg-primary/10 text-primary';
     }
   };
+
+  if (feedbackQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="lg:col-span-2 h-96" />
+            <Skeleton className="h-96" />
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -141,7 +154,7 @@ export default function FeedbackPage() {
                       Anonymous Feedback
                     </CardTitle>
                     <Badge variant="secondary">
-                      {anonymousFeedback.filter(f => !f.isRead).length} unread
+                      {anonymousFeedback.filter(f => !f.is_read).length} unread
                     </Badge>
                   </div>
                   <CardDescription>
@@ -149,7 +162,7 @@ export default function FeedbackPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
                     {anonymousFeedback.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">
                         No anonymous feedback yet
@@ -158,11 +171,11 @@ export default function FeedbackPage() {
                       anonymousFeedback.map((fb, index) => (
                         <div 
                           key={fb.id}
-                          className={`p-4 rounded-lg border animate-slide-up ${
-                            fb.isRead ? 'bg-muted/30' : 'bg-card border-primary/20'
+                          className={`p-4 rounded-lg border animate-slide-up cursor-pointer ${
+                            fb.is_read ? 'bg-muted/30' : 'bg-card border-primary/20'
                           }`}
                           style={{ animationDelay: `${index * 50}ms` }}
-                          onClick={() => !fb.isRead && markAsRead(fb.id)}
+                          onClick={() => !fb.is_read && markAsRead(fb.id)}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
@@ -171,7 +184,7 @@ export default function FeedbackPage() {
                                   {getCategoryIcon(fb.category)}
                                   <span className="ml-1">{fb.category}</span>
                                 </Badge>
-                                {!fb.isRead && (
+                                {!fb.is_read && (
                                   <Badge variant="default" className="text-xs">New</Badge>
                                 )}
                               </div>
@@ -179,9 +192,9 @@ export default function FeedbackPage() {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs text-muted-foreground">
-                                {new Date(fb.createdAt).toLocaleDateString()}
+                                {new Date(fb.created_at).toLocaleDateString()}
                               </p>
-                              {fb.isRead ? (
+                              {fb.is_read ? (
                                 <CheckCircle2 className="w-4 h-4 text-success mt-1 ml-auto" />
                               ) : (
                                 <Eye className="w-4 h-4 text-muted-foreground mt-1 ml-auto" />
@@ -215,9 +228,9 @@ export default function FeedbackPage() {
                       <SelectValue placeholder="Choose a student" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockStudents.map(s => (
+                      {students.map(s => (
                         <SelectItem key={s.id} value={s.id}>
-                          {s.name} ({s.className})
+                          {s.name} ({s.class_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -237,10 +250,10 @@ export default function FeedbackPage() {
                   className="w-full" 
                   variant="gradient"
                   onClick={handleSubmitTeacherFeedback}
-                  disabled={!selectedStudent || !teacherFeedback.trim()}
+                  disabled={!selectedStudent || !teacherFeedback.trim() || createFeedbackMutation.isPending}
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Send Feedback
+                  {createFeedbackMutation.isPending ? 'Sending...' : 'Send Feedback'}
                 </Button>
               </CardContent>
             </Card>
@@ -295,10 +308,10 @@ export default function FeedbackPage() {
                     className="w-full" 
                     variant="gradient"
                     onClick={handleSubmitAnonymous}
-                    disabled={!feedbackContent.trim()}
+                    disabled={!feedbackContent.trim() || createFeedbackMutation.isPending}
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    Submit Anonymously
+                    {createFeedbackMutation.isPending ? 'Submitting...' : 'Submit Anonymously'}
                   </Button>
                 </CardContent>
               </Card>
@@ -306,7 +319,7 @@ export default function FeedbackPage() {
 
             <TabsContent value="received">
               <div className="space-y-4">
-                {teacherFeedbackList.filter(f => f.studentId === 'std-1').length === 0 ? (
+                {teacherFeedbackList.length === 0 ? (
                   <Card className="p-12 text-center">
                     <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-lg font-medium text-muted-foreground">No feedback yet</p>
@@ -315,32 +328,30 @@ export default function FeedbackPage() {
                     </p>
                   </Card>
                 ) : (
-                  teacherFeedbackList
-                    .filter(f => f.studentId === 'std-1')
-                    .map((fb, index) => (
-                      <Card 
-                        key={fb.id}
-                        className="animate-slide-up"
-                        style={{ animationDelay: `${index * 100}ms` }}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium">Teacher Feedback</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(fb.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="text-muted-foreground leading-relaxed">{fb.content}</p>
-                            </div>
+                  teacherFeedbackList.map((fb, index) => (
+                    <Card 
+                      key={fb.id}
+                      className="animate-slide-up"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="w-5 h-5 text-primary" />
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium">Teacher Feedback</span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(fb.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground leading-relaxed">{fb.content}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
               </div>
             </TabsContent>

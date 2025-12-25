@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockStudents, mockExamResults, mockAttendance, mockHomeworkSubmissions } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Users,
   Search,
@@ -15,45 +15,51 @@ import {
   Mail,
   Phone,
   Calendar,
-  BookOpen,
 } from 'lucide-react';
 
 export default function Students() {
-  const { profile } = useAuth();
+  const { studentsQuery, examResultsQuery, getClassOptions } = useRoleBasedData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedStudent, setSelectedStudent] = useState<typeof mockStudents[0] | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+
+  const students = studentsQuery.data || [];
+  const examResults = examResultsQuery.data || [];
+  const classes = [...new Set(students.map(s => s.class_name))];
 
   const filteredStudents = useMemo(() => {
-    return mockStudents.filter(student => {
+    return students.filter(student => {
       const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.includes(searchQuery) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesClass = selectedClass === 'all' || student.className === selectedClass;
+        student.roll_number.includes(searchQuery) ||
+        (student.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const matchesClass = selectedClass === 'all' || student.class_name === selectedClass;
       return matchesSearch && matchesClass;
     });
-  }, [searchQuery, selectedClass]);
+  }, [students, searchQuery, selectedClass]);
 
   const getStudentStats = (studentId: string) => {
-    const exams = mockExamResults.filter(e => e.studentId === studentId);
-    const attendance = mockAttendance.filter(a => a.studentId === studentId);
-    const homework = mockHomeworkSubmissions.filter(h => h.studentId === studentId);
-
+    const exams = examResults.filter(e => e.student_id === studentId);
     const avgScore = exams.length > 0
       ? Math.round(exams.reduce((sum, e) => sum + e.percentage, 0) / exams.length)
       : 0;
-    
-    const presentDays = attendance.filter(a => a.status === 'present').length;
-    const attendanceRate = attendance.length > 0
-      ? Math.round((presentDays / attendance.length) * 100)
-      : 100;
-    
-    const completedHomework = homework.filter(h => h.status !== 'pending').length;
 
-    return { avgScore, attendanceRate, completedHomework, totalHomework: homework.length };
+    return { avgScore, examCount: exams.length };
   };
 
-  const classes = [...new Set(mockStudents.map(s => s.className))];
+  if (studentsQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-48" />
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -82,7 +88,7 @@ export default function Students() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={selectedClass === 'all' ? 'default' : 'outline'}
                   size="sm"
@@ -114,7 +120,7 @@ export default function Students() {
               <Card 
                 key={student.id}
                 variant="interactive"
-                className="animate-slide-up"
+                className="animate-slide-up cursor-pointer"
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => setSelectedStudent(student)}
               >
@@ -125,23 +131,19 @@ export default function Students() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold truncate">{student.name}</h3>
-                      <p className="text-sm text-muted-foreground">Roll #{student.rollNumber}</p>
-                      <Badge variant="secondary" className="mt-2">{student.className}</Badge>
+                      <p className="text-sm text-muted-foreground">Roll #{student.roll_number}</p>
+                      <Badge variant="secondary" className="mt-2">{student.class_name}</Badge>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 mt-6">
+                  <div className="grid grid-cols-2 gap-3 mt-6">
                     <div className="text-center p-2 rounded-lg bg-muted/50">
                       <p className="text-lg font-semibold">{stats.avgScore}%</p>
                       <p className="text-xs text-muted-foreground">Avg Score</p>
                     </div>
                     <div className="text-center p-2 rounded-lg bg-muted/50">
-                      <p className="text-lg font-semibold">{stats.attendanceRate}%</p>
-                      <p className="text-xs text-muted-foreground">Attendance</p>
-                    </div>
-                    <div className="text-center p-2 rounded-lg bg-muted/50">
-                      <p className="text-lg font-semibold">{stats.completedHomework}</p>
-                      <p className="text-xs text-muted-foreground">Tasks</p>
+                      <p className="text-lg font-semibold">{stats.examCount}</p>
+                      <p className="text-xs text-muted-foreground">Exams</p>
                     </div>
                   </div>
                 </CardContent>
@@ -155,7 +157,7 @@ export default function Students() {
             <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg font-medium text-muted-foreground">No students found</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search or filters
+              {students.length === 0 ? 'No students have been added yet' : 'Try adjusting your search or filters'}
             </p>
           </Card>
         )}
@@ -173,18 +175,16 @@ export default function Students() {
                     <div>
                       <h2 className="text-xl font-semibold">{selectedStudent.name}</h2>
                       <p className="text-sm text-muted-foreground font-normal">
-                        {selectedStudent.className} • Roll #{selectedStudent.rollNumber}
+                        {selectedStudent.class_name} • Roll #{selectedStudent.roll_number}
                       </p>
                     </div>
                   </DialogTitle>
                 </DialogHeader>
 
                 <Tabs defaultValue="info" className="mt-4">
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="info">Info</TabsTrigger>
                     <TabsTrigger value="exams">Exams</TabsTrigger>
-                    <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                    <TabsTrigger value="homework">Homework</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="info" className="space-y-4 mt-4">
@@ -193,7 +193,7 @@ export default function Students() {
                         <Mail className="w-5 h-5 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-sm font-medium">{selectedStudent.email}</p>
+                          <p className="text-sm font-medium">{selectedStudent.email || 'N/A'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
@@ -207,7 +207,7 @@ export default function Students() {
                         <User className="w-5 h-5 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground">Parent</p>
-                          <p className="text-sm font-medium">{selectedStudent.parentName || 'N/A'}</p>
+                          <p className="text-sm font-medium">{selectedStudent.parent_name || 'N/A'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
@@ -215,34 +215,36 @@ export default function Students() {
                         <div>
                           <p className="text-xs text-muted-foreground">Enrolled</p>
                           <p className="text-sm font-medium">
-                            {selectedStudent.createdAt.toLocaleDateString()}
+                            {selectedStudent.created_at ? new Date(selectedStudent.created_at).toLocaleDateString() : 'N/A'}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <p className="text-sm font-medium mb-2">Subjects</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedStudent.subjects.map(subject => (
-                          <Badge key={subject} variant="secondary">{subject}</Badge>
-                        ))}
+                    {selectedStudent.subjects && selectedStudent.subjects.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Subjects</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedStudent.subjects.map((subject: string) => (
+                            <Badge key={subject} variant="secondary">{subject}</Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="exams" className="mt-4">
                     <div className="space-y-3">
-                      {mockExamResults
-                        .filter(e => e.studentId === selectedStudent.id)
+                      {examResults
+                        .filter(e => e.student_id === selectedStudent.id)
                         .map(exam => (
                           <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                             <div>
                               <p className="font-medium">{exam.subject}</p>
-                              <p className="text-sm text-muted-foreground">{exam.examName}</p>
+                              <p className="text-sm text-muted-foreground">{exam.exam_name}</p>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="font-semibold">{exam.marksObtained}/{exam.totalMarks}</span>
+                              <span className="font-semibold">{exam.marks_obtained}/{exam.total_marks}</span>
                               <Badge className={
                                 exam.percentage >= 80 ? 'bg-success/10 text-success' :
                                 exam.percentage >= 60 ? 'bg-warning/10 text-warning' :
@@ -254,47 +256,9 @@ export default function Students() {
                           </div>
                         ))
                       }
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="attendance" className="mt-4">
-                    <div className="space-y-3">
-                      {mockAttendance
-                        .filter(a => a.studentId === selectedStudent.id)
-                        .slice(0, 10)
-                        .map(att => (
-                          <div key={att.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                            <span>{new Date(att.date).toLocaleDateString()}</span>
-                            <Badge variant={
-                              att.status === 'present' ? 'default' :
-                              att.status === 'absent' ? 'destructive' :
-                              'secondary'
-                            }>
-                              {att.status}
-                            </Badge>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="homework" className="mt-4">
-                    <div className="space-y-3">
-                      {mockHomeworkSubmissions
-                        .filter(h => h.studentId === selectedStudent.id)
-                        .map(submission => (
-                          <div key={submission.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                            <span>Homework #{submission.homeworkId}</span>
-                            <Badge variant={
-                              submission.status === 'submitted' || submission.status === 'graded' ? 'default' :
-                              submission.status === 'late' ? 'secondary' :
-                              'destructive'
-                            }>
-                              {submission.status}
-                            </Badge>
-                          </div>
-                        ))
-                      }
+                      {examResults.filter(e => e.student_id === selectedStudent.id).length === 0 && (
+                        <p className="text-center text-muted-foreground py-4">No exam results yet</p>
+                      )}
                     </div>
                   </TabsContent>
                 </Tabs>

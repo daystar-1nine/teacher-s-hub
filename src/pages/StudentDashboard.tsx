@@ -1,35 +1,46 @@
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
 import { NotificationsPanel } from '@/components/dashboard/NotificationsPanel';
 import { 
   TrendingUp, CalendarCheck, Clock, CheckCircle2, Video, ClipboardList, 
-  BookOpen, Sparkles, ArrowRight, AlertCircle
+  BookOpen, Sparkles
 } from 'lucide-react';
-import { mockAttendance, mockHomework, mockHomeworkSubmissions, mockExamResults } from '@/data/mockData';
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
+  const { examResultsQuery, homeworkQuery, getStudentId } = useRoleBasedData();
+  const [studentId, setStudentId] = useState<string | null>(null);
   
-  const studentExams = mockExamResults.filter(e => e.studentId === 'std-1');
-  const averageScore = studentExams.length > 0 
-    ? Math.round(studentExams.reduce((sum, e) => sum + e.percentage, 0) / studentExams.length) : 0;
+  const examResults = examResultsQuery.data || [];
+  const homework = homeworkQuery.data || [];
+
+  useEffect(() => {
+    const fetchStudentId = async () => {
+      const id = await getStudentId();
+      setStudentId(id);
+    };
+    fetchStudentId();
+  }, [getStudentId]);
+
+  const averageScore = examResults.length > 0 
+    ? Math.round(examResults.reduce((sum, e) => sum + e.percentage, 0) / examResults.length) 
+    : 0;
   
-  const studentAttendance = mockAttendance.filter(a => a.studentId === 'std-1');
-  const presentDays = studentAttendance.filter(a => a.status === 'present').length;
-  const attendanceRate = studentAttendance.length > 0 
-    ? Math.round((presentDays / studentAttendance.length) * 100) : 100;
-  
-  const pendingHomework = mockHomeworkSubmissions.filter(s => s.studentId === 'std-1' && s.status === 'pending').length;
+  const pendingHomework = homework.filter(h => new Date(h.due_date) > new Date()).length;
+  const completedHomework = homework.length - pendingHomework;
 
   const stats = [
     { icon: TrendingUp, label: 'Average Score', value: `${averageScore}%`, color: 'bg-primary/10 text-primary' },
-    { icon: CalendarCheck, label: 'Attendance', value: `${attendanceRate}%`, color: 'bg-success/10 text-success' },
+    { icon: CalendarCheck, label: 'Exams Taken', value: examResults.length, color: 'bg-success/10 text-success' },
     { icon: Clock, label: 'Pending Tasks', value: pendingHomework, color: 'bg-warning/10 text-warning' },
-    { icon: CheckCircle2, label: 'Completed', value: mockHomeworkSubmissions.filter(s => s.studentId === 'std-1' && s.status !== 'pending').length, color: 'bg-accent/10 text-accent' },
+    { icon: CheckCircle2, label: 'Completed', value: completedHomework, color: 'bg-accent/10 text-accent' },
   ];
 
   const quickActions = [
@@ -40,6 +51,21 @@ export default function StudentDashboard() {
   ];
 
   const firstName = profile?.name?.split(' ')[0] || 'Student';
+
+  const isLoading = examResultsQuery.isLoading || homeworkQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

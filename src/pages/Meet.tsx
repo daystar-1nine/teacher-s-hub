@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { GoogleMeetLink } from '@/types';
-import { mockMeetLinks, classOptions, subjectOptions } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   Video,
   Plus,
-  ExternalLink,
   Copy,
   Trash2,
   Link as LinkIcon,
@@ -26,54 +24,52 @@ import {
 
 export default function Meet() {
   const { profile } = useAuth();
-  const [meetLinks, setMeetLinks] = useLocalStorage<GoogleMeetLink[]>('meet_links', mockMeetLinks);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { meetLinksQuery, createMeetLinkMutation, deleteMeetLinkMutation, classesQuery, subjectOptions } = useRoleBasedData();
   
-  // Form state
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formClass, setFormClass] = useState('');
   const [formSubject, setFormSubject] = useState('');
   const [formLink, setFormLink] = useState('');
 
   const isTeacher = profile?.role === 'teacher';
+  const meetLinks = meetLinksQuery.data || [];
+  const classes = classesQuery.data || [];
 
-  const myMeetLinks = meetLinks.filter(m => 
-    isTeacher ? m.teacherId === profile?.user_id || m.teacherId === 'teacher-1' : m.isActive
-  );
-
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     if (!formClass || !formLink) {
       toast.error('Please fill in required fields');
       return;
     }
 
-    // Validate Google Meet link
     if (!formLink.includes('meet.google.com')) {
       toast.error('Please enter a valid Google Meet link');
       return;
     }
 
-    const newLink: GoogleMeetLink = {
-      id: `meet-${Date.now()}`,
-      className: formClass,
-      subject: formSubject || undefined,
-      meetLink: formLink,
-      teacherId: profile?.user_id || '',
-      schoolCode: profile?.school_code || '',
-      isActive: true,
-      createdAt: new Date(),
-    };
-
-    setMeetLinks(prev => [...prev, newLink]);
-    setFormClass('');
-    setFormSubject('');
-    setFormLink('');
-    setIsAddDialogOpen(false);
-    toast.success('Meet link added successfully!');
+    try {
+      await createMeetLinkMutation.mutateAsync({
+        className: formClass,
+        subject: formSubject || undefined,
+        meetLink: formLink,
+      });
+      
+      setFormClass('');
+      setFormSubject('');
+      setFormLink('');
+      setIsAddDialogOpen(false);
+      toast.success('Meet link added successfully!');
+    } catch (error) {
+      toast.error('Failed to add meet link');
+    }
   };
 
-  const handleDeleteLink = (linkId: string) => {
-    setMeetLinks(prev => prev.filter(m => m.id !== linkId));
-    toast.success('Meet link deleted');
+  const handleDeleteLink = async (linkId: string) => {
+    try {
+      await deleteMeetLinkMutation.mutateAsync(linkId);
+      toast.success('Meet link deleted');
+    } catch (error) {
+      toast.error('Failed to delete meet link');
+    }
   };
 
   const handleCopyLink = (link: string) => {
@@ -84,6 +80,19 @@ export default function Meet() {
   const handleJoinMeet = (link: string) => {
     window.open(link, '_blank', 'noopener,noreferrer');
   };
+
+  if (meetLinksQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-64" />)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -119,8 +128,8 @@ export default function Meet() {
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        {classOptions.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        {classes.map(c => (
+                          <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -154,10 +163,10 @@ export default function Meet() {
                     className="w-full" 
                     variant="gradient"
                     onClick={handleAddLink}
-                    disabled={!formClass || !formLink}
+                    disabled={!formClass || !formLink || createMeetLinkMutation.isPending}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Link
+                    {createMeetLinkMutation.isPending ? 'Adding...' : 'Add Link'}
                   </Button>
                 </div>
               </DialogContent>
@@ -185,77 +194,7 @@ export default function Meet() {
         )}
 
         {/* Meet Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {myMeetLinks.map((meet, index) => (
-            <Card 
-              key={meet.id}
-              className="animate-slide-up overflow-hidden"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="h-2 gradient-primary" />
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{meet.className}</CardTitle>
-                    <CardDescription>
-                      {meet.subject || 'General Meeting'}
-                    </CardDescription>
-                  </div>
-                  <Badge variant={meet.isActive ? 'default' : 'secondary'}>
-                    {meet.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                  <LinkIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate">{meet.meetLink}</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button 
-                    className="flex-1" 
-                    variant="gradient"
-                    onClick={() => handleJoinMeet(meet.meetLink)}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Join
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleCopyLink(meet.meetLink)}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                  {isTeacher && (
-                    <Button 
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleDeleteLink(meet.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(meet.createdAt).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    {meet.className}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {myMeetLinks.length === 0 && (
+        {meetLinks.length === 0 ? (
           <Card className="p-12 text-center">
             <Video className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="text-xl font-semibold text-muted-foreground">No Meet Links</h3>
@@ -266,6 +205,77 @@ export default function Meet() {
               }
             </p>
           </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {meetLinks.map((meet, index) => (
+              <Card 
+                key={meet.id}
+                className="animate-slide-up overflow-hidden"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="h-2 gradient-primary" />
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{meet.class_name}</CardTitle>
+                      <CardDescription>
+                        {meet.subject || 'General Meeting'}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={meet.is_active ? 'default' : 'secondary'}>
+                      {meet.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                    <LinkIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm truncate">{meet.meet_link}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      variant="gradient"
+                      onClick={() => handleJoinMeet(meet.meet_link)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Join
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopyLink(meet.meet_link)}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    {isTeacher && (
+                      <Button 
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDeleteLink(meet.id)}
+                        className="text-destructive hover:text-destructive"
+                        disabled={deleteMeetLinkMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(meet.created_at).toLocaleDateString()}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {meet.class_name}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Quick Start Guide for Teachers */}

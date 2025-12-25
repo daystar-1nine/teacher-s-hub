@@ -1,34 +1,51 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
 import { QuickActionsPanel } from '@/components/dashboard/QuickActionsPanel';
 import { RiskAlertPanel } from '@/components/dashboard/RiskAlertPanel';
 import { 
-  Users, CalendarCheck, BookOpen, MessageSquare, Video, BarChart3, 
-  ClipboardList, ArrowRight, AlertCircle
+  Users, CalendarCheck, BookOpen, MessageSquare, Video, BarChart3
 } from 'lucide-react';
-import { mockStudents, mockAttendance, mockHomework, mockHomeworkSubmissions, mockExamResults, mockFeedback } from '@/data/mockData';
 
 export default function TeacherDashboard() {
   const { profile } = useAuth();
+  const { studentsQuery, homeworkQuery, feedbackQuery } = useRoleBasedData();
   
-  const todayDate = new Date().toISOString().split('T')[0];
-  const todayAttendance = mockAttendance.filter(a => a.date === todayDate);
-  const presentCount = todayAttendance.filter(a => a.status === 'present').length;
-  const pendingSubmissions = mockHomeworkSubmissions.filter(s => s.status === 'pending').length;
-  const unreadFeedback = mockFeedback.filter(f => !f.isRead).length;
+  const students = studentsQuery.data || [];
+  const homework = homeworkQuery.data || [];
+  const feedback = feedbackQuery.data || [];
+
+  const pendingHomework = homework.filter(h => new Date(h.due_date) > new Date()).length;
+  const unreadFeedback = feedback.filter(f => !f.is_read && f.type === 'anonymous').length;
 
   const stats = [
-    { icon: Users, label: 'Total Students', value: mockStudents.length, color: 'bg-primary/10 text-primary', href: '/students' },
-    { icon: CalendarCheck, label: 'Present Today', value: presentCount, color: 'bg-success/10 text-success', href: '/attendance' },
-    { icon: BookOpen, label: 'Pending Homework', value: pendingSubmissions, color: 'bg-warning/10 text-warning', href: '/homework' },
+    { icon: Users, label: 'Total Students', value: students.length, color: 'bg-primary/10 text-primary', href: '/students' },
+    { icon: CalendarCheck, label: 'Active Classes', value: [...new Set(students.map(s => s.class_name))].length, color: 'bg-success/10 text-success', href: '/attendance' },
+    { icon: BookOpen, label: 'Active Homework', value: pendingHomework, color: 'bg-warning/10 text-warning', href: '/homework' },
     { icon: MessageSquare, label: 'New Feedback', value: unreadFeedback, color: 'bg-accent/10 text-accent', href: '/feedback' },
   ];
 
   const firstName = profile?.name?.split(' ')[0] || 'Teacher';
+
+  const isLoading = studentsQuery.isLoading || homeworkQuery.isLoading || feedbackQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

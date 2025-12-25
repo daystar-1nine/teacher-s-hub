@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,9 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { ExamResult } from '@/types';
-import { mockStudents, mockExamResults, classOptions, subjectOptions } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   ClipboardList,
@@ -21,13 +20,13 @@ import {
   Minus,
   Award,
   Sparkles,
-  BarChart3,
   User,
 } from 'lucide-react';
 
 export default function Exams() {
   const { profile } = useAuth();
-  const [examResults, setExamResults] = useLocalStorage<ExamResult[]>('exam_results', mockExamResults);
+  const { examResultsQuery, studentsQuery, createExamResultMutation, classesQuery, subjectOptions } = useRoleBasedData();
+  
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -39,79 +38,60 @@ export default function Exams() {
   const [formSubject, setFormSubject] = useState('');
   const [formMarks, setFormMarks] = useState('');
   const [formTotalMarks, setFormTotalMarks] = useState('100');
+  const [formExamDate, setFormExamDate] = useState(new Date().toISOString().split('T')[0]);
 
   const isTeacher = profile?.role === 'teacher';
+  const examResults = examResultsQuery.data || [];
+  const students = studentsQuery.data || [];
+  const classes = classesQuery.data || [];
 
   const filteredResults = useMemo(() => {
     let results = examResults;
     
-    if (!isTeacher) {
-      results = results.filter(r => r.studentId === 'std-1');
-    }
-    
     if (selectedClass !== 'all') {
-      results = results.filter(r => r.className === selectedClass);
+      results = results.filter(r => r.class_name === selectedClass);
     }
     if (selectedSubject !== 'all') {
       results = results.filter(r => r.subject === selectedSubject);
     }
     
     return results;
-  }, [examResults, selectedClass, selectedSubject, isTeacher]);
+  }, [examResults, selectedClass, selectedSubject]);
 
-  const studentResults = useMemo(() => {
-    if (!selectedStudent) return [];
-    return examResults.filter(r => r.studentId === selectedStudent);
-  }, [examResults, selectedStudent]);
-
-  const getGrade = (percentage: number): string => {
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B+';
-    if (percentage >= 60) return 'B';
-    if (percentage >= 50) return 'C';
-    if (percentage >= 40) return 'D';
-    return 'F';
-  };
-
-  const handleAddResult = () => {
+  const handleAddResult = async () => {
     if (!formStudent || !formExamName || !formSubject || !formMarks || !formTotalMarks) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    const marks = parseInt(formMarks);
-    const total = parseInt(formTotalMarks);
-    const percentage = Math.round((marks / total) * 100);
+    const student = students.find(s => s.id === formStudent);
+    if (!student) {
+      toast.error('Student not found');
+      return;
+    }
 
-    const student = mockStudents.find(s => s.id === formStudent);
-
-    const newResult: ExamResult = {
-      id: `exam-${Date.now()}`,
-      studentId: formStudent,
-      examName: formExamName,
-      subject: formSubject,
-      marksObtained: marks,
-      totalMarks: total,
-      percentage,
-      grade: getGrade(percentage),
-      className: student?.className || '',
-      schoolCode: profile?.school_code || '',
-      examDate: new Date(),
-      createdAt: new Date(),
-    };
-
-    setExamResults(prev => [...prev, newResult]);
-    
-    // Reset form
-    setFormStudent('');
-    setFormExamName('');
-    setFormSubject('');
-    setFormMarks('');
-    setFormTotalMarks('100');
-    setIsAddDialogOpen(false);
-    
-    toast.success('Exam result added successfully!');
+    try {
+      await createExamResultMutation.mutateAsync({
+        studentId: formStudent,
+        examName: formExamName,
+        subject: formSubject,
+        marksObtained: parseInt(formMarks),
+        totalMarks: parseInt(formTotalMarks),
+        className: student.class_name,
+        examDate: formExamDate,
+      });
+      
+      setFormStudent('');
+      setFormExamName('');
+      setFormSubject('');
+      setFormMarks('');
+      setFormTotalMarks('100');
+      setIsAddDialogOpen(false);
+      
+      toast.success('Exam result added successfully!');
+    } catch (error) {
+      toast.error('Failed to add exam result');
+    }
   };
 
   const getPerformanceIcon = (percentage: number) => {
@@ -128,11 +108,10 @@ export default function Exams() {
 
   // Student performance analysis
   const studentPerformance = useMemo(() => {
-    const studentExams = examResults.filter(r => r.studentId === 'std-1');
-    if (studentExams.length === 0) return null;
+    if (isTeacher || examResults.length === 0) return null;
 
     const subjectAverages: Record<string, number[]> = {};
-    studentExams.forEach(exam => {
+    examResults.forEach(exam => {
       if (!subjectAverages[exam.subject]) {
         subjectAverages[exam.subject] = [];
       }
@@ -145,7 +124,7 @@ export default function Exams() {
     })).sort((a, b) => b.average - a.average);
 
     const overallAverage = Math.round(
-      studentExams.reduce((sum, e) => sum + e.percentage, 0) / studentExams.length
+      examResults.reduce((sum, e) => sum + e.percentage, 0) / examResults.length
     );
 
     return {
@@ -154,7 +133,20 @@ export default function Exams() {
       weakSubjects: subjectStats.filter(s => s.average < 70).slice(-3),
       subjectStats,
     };
-  }, [examResults]);
+  }, [examResults, isTeacher]);
+
+  if (examResultsQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -190,9 +182,9 @@ export default function Exams() {
                         <SelectValue placeholder="Select student" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockStudents.map(s => (
+                        {students.map(s => (
                           <SelectItem key={s.id} value={s.id}>
-                            {s.name} ({s.className})
+                            {s.name} ({s.class_name})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -219,6 +211,14 @@ export default function Exams() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <Label>Exam Date</Label>
+                    <Input
+                      type="date"
+                      value={formExamDate}
+                      onChange={(e) => setFormExamDate(e.target.value)}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Marks Obtained</Label>
@@ -239,8 +239,13 @@ export default function Exams() {
                       />
                     </div>
                   </div>
-                  <Button className="w-full" variant="gradient" onClick={handleAddResult}>
-                    Add Result
+                  <Button 
+                    className="w-full" 
+                    variant="gradient" 
+                    onClick={handleAddResult}
+                    disabled={createExamResultMutation.isPending}
+                  >
+                    {createExamResultMutation.isPending ? 'Adding...' : 'Add Result'}
                   </Button>
                 </div>
               </DialogContent>
@@ -271,12 +276,16 @@ export default function Exams() {
                   <span className="font-medium">Strong Subjects</span>
                 </div>
                 <div className="space-y-2">
-                  {studentPerformance.strongSubjects.map(s => (
-                    <div key={s.subject} className="flex items-center justify-between">
-                      <span className="text-sm">{s.subject}</span>
-                      <Badge className="bg-success/10 text-success">{s.average}%</Badge>
-                    </div>
-                  ))}
+                  {studentPerformance.strongSubjects.length > 0 ? (
+                    studentPerformance.strongSubjects.map(s => (
+                      <div key={s.subject} className="flex items-center justify-between">
+                        <span className="text-sm">{s.subject}</span>
+                        <Badge className="bg-success/10 text-success">{s.average}%</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No data yet</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -287,12 +296,16 @@ export default function Exams() {
                   <span className="font-medium">Needs Improvement</span>
                 </div>
                 <div className="space-y-2">
-                  {studentPerformance.weakSubjects.map(s => (
-                    <div key={s.subject} className="flex items-center justify-between">
-                      <span className="text-sm">{s.subject}</span>
-                      <Badge variant="secondary">{s.average}%</Badge>
-                    </div>
-                  ))}
+                  {studentPerformance.weakSubjects.length > 0 ? (
+                    studentPerformance.weakSubjects.map(s => (
+                      <div key={s.subject} className="flex items-center justify-between">
+                        <span className="text-sm">{s.subject}</span>
+                        <Badge variant="secondary">{s.average}%</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Great job! Keep it up!</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -311,8 +324,8 @@ export default function Exams() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Classes</SelectItem>
-                      {classOptions.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      {classes.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -351,10 +364,17 @@ export default function Exams() {
           </TabsList>
 
           <TabsContent value="list" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredResults.map((result, index) => {
-                const student = mockStudents.find(s => s.id === result.studentId);
-                return (
+            {filteredResults.length === 0 ? (
+              <Card className="p-12 text-center">
+                <ClipboardList className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">No exam results found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isTeacher ? 'Click "Add Result" to add exam results' : 'No exam results have been recorded yet'}
+                </p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredResults.map((result, index) => (
                   <Card 
                     key={result.id}
                     className="animate-slide-up"
@@ -364,11 +384,13 @@ export default function Exams() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="font-semibold text-primary">{student?.name.charAt(0)}</span>
+                            <span className="font-semibold text-primary">
+                              {result.students?.name?.charAt(0) || '?'}
+                            </span>
                           </div>
                           <div>
-                            <p className="font-medium">{student?.name}</p>
-                            <p className="text-sm text-muted-foreground">{result.className}</p>
+                            <p className="font-medium">{result.students?.name || 'Unknown'}</p>
+                            <p className="text-sm text-muted-foreground">{result.class_name}</p>
                           </div>
                         </div>
                         {getPerformanceIcon(result.percentage)}
@@ -377,11 +399,11 @@ export default function Exams() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary">{result.subject}</Badge>
-                          <span className="text-sm text-muted-foreground">{result.examName}</span>
+                          <span className="text-sm text-muted-foreground">{result.exam_name}</span>
                         </div>
                         
                         <div className="flex items-center justify-between">
-                          <span className="text-3xl font-bold">{result.marksObtained}<span className="text-lg text-muted-foreground">/{result.totalMarks}</span></span>
+                          <span className="text-3xl font-bold">{result.marks_obtained}<span className="text-lg text-muted-foreground">/{result.total_marks}</span></span>
                           <div className={`px-3 py-1.5 rounded-lg font-semibold ${getPerformanceColor(result.percentage)}`}>
                             {result.grade} ({result.percentage}%)
                           </div>
@@ -400,9 +422,9 @@ export default function Exams() {
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {isTeacher && (
@@ -413,9 +435,9 @@ export default function Exams() {
                     <CardTitle>Students</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="divide-y">
-                      {mockStudents.map(student => {
-                        const results = examResults.filter(r => r.studentId === student.id);
+                    <div className="divide-y max-h-96 overflow-y-auto">
+                      {students.map(student => {
+                        const results = examResults.filter(r => r.student_id === student.id);
                         const avg = results.length > 0
                           ? Math.round(results.reduce((sum, r) => sum + r.percentage, 0) / results.length)
                           : 0;
@@ -430,14 +452,14 @@ export default function Exams() {
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-primary">{student.name.charAt(0)}</span>
+                                <span className="text-sm font-medium text-primary">{student.name.charAt(0)}</span>
                               </div>
                               <div className="text-left">
-                                <p className="font-medium">{student.name}</p>
-                                <p className="text-xs text-muted-foreground">{student.className}</p>
+                                <p className="font-medium text-sm">{student.name}</p>
+                                <p className="text-xs text-muted-foreground">{student.class_name}</p>
                               </div>
                             </div>
-                            <Badge className={getPerformanceColor(avg)}>{avg}%</Badge>
+                            <Badge variant={avg >= 70 ? 'default' : 'secondary'}>{avg}%</Badge>
                           </button>
                         );
                       })}
@@ -449,34 +471,39 @@ export default function Exams() {
                   <CardHeader>
                     <CardTitle>
                       {selectedStudent 
-                        ? `Results for ${mockStudents.find(s => s.id === selectedStudent)?.name}`
+                        ? `Results - ${students.find(s => s.id === selectedStudent)?.name}`
                         : 'Select a student'
                       }
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {selectedStudent ? (
-                      <div className="space-y-4">
-                        {studentResults.map(result => (
-                          <div key={result.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                            <div>
-                              <p className="font-medium">{result.subject}</p>
-                              <p className="text-sm text-muted-foreground">{result.examName}</p>
+                      <div className="space-y-3">
+                        {examResults
+                          .filter(r => r.student_id === selectedStudent)
+                          .map(result => (
+                            <div key={result.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                              <div>
+                                <p className="font-medium">{result.subject}</p>
+                                <p className="text-sm text-muted-foreground">{result.exam_name}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold">{result.marks_obtained}/{result.total_marks}</span>
+                                <Badge className={getPerformanceColor(result.percentage)}>
+                                  {result.grade}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                              <span className="text-lg font-semibold">{result.marksObtained}/{result.totalMarks}</span>
-                              <Badge className={getPerformanceColor(result.percentage)}>
-                                {result.grade}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))}
+                          ))
+                        }
+                        {examResults.filter(r => r.student_id === selectedStudent).length === 0 && (
+                          <p className="text-center text-muted-foreground py-8">No results for this student</p>
+                        )}
                       </div>
                     ) : (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Select a student to view their results</p>
-                      </div>
+                      <p className="text-center text-muted-foreground py-8">
+                        Select a student from the list to view their results
+                      </p>
                     )}
                   </CardContent>
                 </Card>
