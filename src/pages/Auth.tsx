@@ -408,10 +408,6 @@ export default function Auth() {
                     )}
                   </Button>
                 </form>
-
-                <p className="text-xs text-center text-muted-foreground mt-4">
-                  Create an account using the Sign Up tab with school code: DEMO2024
-                </p>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0 space-y-4">
@@ -482,14 +478,16 @@ export default function Auth() {
                       <Input
                         id="signup-school"
                         type="text"
-                        placeholder="DEMO2024"
+                        placeholder="Enter your school code"
                         className="pl-10 uppercase"
                         value={signupSchoolCode}
                         onChange={(e) => setSignupSchoolCode(e.target.value.toUpperCase())}
                         disabled={isSubmitting}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">Valid codes: DEMO2024, SCHOOL001, TEST123</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ask your school administrator for the school code
+                    </p>
                   </div>
 
                   <div className="space-y-2">

@@ -25,6 +25,7 @@ import {
   Settings,
   Activity,
   Shield,
+  School,
 } from 'lucide-react';
 
 interface NavItem {
@@ -80,6 +81,7 @@ const adminNavItems: NavItem[] = [
 
 // Admin tools section
 const adminToolItems: NavItem[] = [
+  { icon: School, label: 'Schools', href: '/schools', roles: ['admin'] },
   { icon: Activity, label: 'Activity Logs', href: '/activity-logs', roles: ['admin'] },
   { icon: Shield, label: 'Health Report', href: '/health-report', roles: ['admin'], badge: 'AI' },
   { icon: Settings, label: 'Settings', href: '/settings', roles: ['admin'] },

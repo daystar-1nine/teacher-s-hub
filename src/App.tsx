@@ -21,6 +21,7 @@ import Meet from "./pages/Meet";
 import Analytics from "./pages/Analytics";
 import QuestionPaper from "./pages/QuestionPaper";
 import SchoolSettings from "./pages/SchoolSettings";
+import SchoolManagement from "./pages/SchoolManagement";
 import ClassManagement from "./pages/ClassManagement";
 import ActivityLogs from "./pages/ActivityLogs";
 import SchoolHealthReport from "./pages/SchoolHealthReport";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
             <Route path="/question-paper" element={<RequireAuth><QuestionPaper /></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><SchoolSettings /></RequireAuth>} />
+            <Route path="/schools" element={<RequireAuth><SchoolManagement /></RequireAuth>} />
             <Route path="/classes" element={<RequireAuth><ClassManagement /></RequireAuth>} />
             <Route path="/activity-logs" element={<RequireAuth><ActivityLogs /></RequireAuth>} />
             <Route path="/health-report" element={<RequireAuth><SchoolHealthReport /></RequireAuth>} />
