@@ -3,41 +3,57 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { 
-  GraduationCap, 
-  CalendarCheck, 
-  ClipboardList, 
-  BookOpen, 
-  Sparkles, 
-  MessageSquare, 
-  Video, 
-  Users, 
-  ArrowRight, 
-  CheckCircle2,
-  Zap,
-  Brain,
-  Shield
-} from 'lucide-react';
-
-const features = [
-  { icon: CalendarCheck, title: 'Attendance', description: 'Real-time tracking', color: 'neon-purple' },
-  { icon: ClipboardList, title: 'Exams', description: 'Performance analytics', color: 'neon-pink' },
-  { icon: BookOpen, title: 'Homework', description: 'Smart assignments', color: 'neon-cyan' },
-  { icon: Sparkles, title: 'AI Explain', description: 'Instant answers', color: 'neon-green' },
-  { icon: MessageSquare, title: 'Feedback', description: 'Anonymous & direct', color: 'neon-orange' },
-  { icon: Video, title: 'Live Classes', description: 'One-click join', color: 'neon-yellow' },
-];
-
-const stats = [
-  { value: '100+', label: 'Schools', icon: Users },
-  { value: '1K+', label: 'Educators', icon: GraduationCap },
-  { value: '10K+', label: 'AI Queries', icon: Brain },
-  { value: '99.9%', label: 'Uptime', icon: Shield },
-];
-
+import { GraduationCap, CalendarCheck, ClipboardList, BookOpen, Sparkles, MessageSquare, Video, Users, ArrowRight, CheckCircle2, Zap, Brain, Shield } from 'lucide-react';
+const features = [{
+  icon: CalendarCheck,
+  title: 'Attendance',
+  description: 'Real-time tracking',
+  color: 'neon-purple'
+}, {
+  icon: ClipboardList,
+  title: 'Exams',
+  description: 'Performance analytics',
+  color: 'neon-pink'
+}, {
+  icon: BookOpen,
+  title: 'Homework',
+  description: 'Smart assignments',
+  color: 'neon-cyan'
+}, {
+  icon: Sparkles,
+  title: 'AI Explain',
+  description: 'Instant answers',
+  color: 'neon-green'
+}, {
+  icon: MessageSquare,
+  title: 'Feedback',
+  description: 'Anonymous & direct',
+  color: 'neon-orange'
+}, {
+  icon: Video,
+  title: 'Live Classes',
+  description: 'One-click join',
+  color: 'neon-yellow'
+}];
+const stats = [{
+  value: '100+',
+  label: 'Schools',
+  icon: Users
+}, {
+  value: '1K+',
+  label: 'Educators',
+  icon: GraduationCap
+}, {
+  value: '10K+',
+  label: 'AI Queries',
+  icon: Brain
+}, {
+  value: '99.9%',
+  label: 'Uptime',
+  icon: Shield
+}];
 export default function Index() {
-  return (
-    <div className="min-h-screen bg-background overflow-hidden">
+  return <div className="min-h-screen bg-background overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -right-20 w-[500px] h-[500px] rounded-full bg-primary/20 blur-[120px] animate-pulse-soft" />
@@ -112,21 +128,12 @@ export default function Index() {
           </ScrollReveal>
 
           {/* Stats Row */}
-          <ScrollRevealGroup 
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto"
-            animation="fade-up"
-            staggerDelay={100}
-          >
-            {stats.map((stat) => (
-              <div 
-                key={stat.label}
-                className="glass rounded-2xl p-6 text-center card-hover"
-              >
+          <ScrollRevealGroup className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto" animation="fade-up" staggerDelay={100}>
+            {stats.map(stat => <div key={stat.label} className="glass rounded-2xl p-6 text-center card-hover">
                 <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
                 <p className="text-3xl md:text-4xl font-black text-gradient">{stat.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-              </div>
-            ))}
+              </div>)}
           </ScrollRevealGroup>
         </div>
       </section>
@@ -143,16 +150,8 @@ export default function Index() {
             </p>
           </ScrollReveal>
           
-          <ScrollRevealGroup 
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
-            animation="scale"
-            staggerDelay={80}
-          >
-            {features.map((feature) => (
-              <Card 
-                key={feature.title}
-                className="glass border-border/50 text-center group cursor-pointer card-hover"
-              >
+          <ScrollRevealGroup className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" animation="scale" staggerDelay={80}>
+            {features.map(feature => <Card key={feature.title} className="glass border-border/50 text-center group cursor-pointer card-hover">
                 <CardContent className="p-6">
                   <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-glow transition-all duration-300">
                     <feature.icon className="w-7 h-7 text-primary-foreground" />
@@ -160,8 +159,7 @@ export default function Index() {
                   <h3 className="font-bold text-lg">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{feature.description}</p>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </ScrollRevealGroup>
         </div>
       </section>
@@ -178,26 +176,14 @@ export default function Index() {
                 </h2>
               </ScrollReveal>
               <div className="space-y-5">
-                {[
-                  'AI-powered topic explanations in seconds',
-                  'Real-time attendance with smart analytics',
-                  'Comprehensive performance dashboards',
-                  'Anonymous student feedback system',
-                  'Integrated video conferencing'
-                ].map((item, index) => (
-                  <ScrollReveal 
-                    key={item}
-                    animation="fade-right"
-                    delay={index * 100}
-                  >
+                {['AI-powered topic explanations in seconds', 'Real-time attendance with smart analytics', 'Comprehensive performance dashboards', 'Anonymous student feedback system', 'Integrated video conferencing'].map((item, index) => <ScrollReveal key={item} animation="fade-right" delay={index * 100}>
                     <div className="flex items-center gap-4 glass rounded-xl p-4">
                       <div className="w-10 h-10 rounded-xl gradient-success flex items-center justify-center shrink-0">
                         <CheckCircle2 className="w-5 h-5 text-success-foreground" />
                       </div>
                       <span className="text-lg font-medium">{item}</span>
                     </div>
-                  </ScrollReveal>
-                ))}
+                  </ScrollReveal>)}
               </div>
               <ScrollReveal animation="fade-up" delay={500}>
                 <Button className="mt-10" size="xl" variant="gradient-aurora" asChild>
@@ -210,11 +196,7 @@ export default function Index() {
             </div>
             
             {/* Visual Card Grid */}
-            <ScrollRevealGroup 
-              className="grid grid-cols-2 gap-4"
-              animation="scale"
-              staggerDelay={150}
-            >
+            <ScrollRevealGroup className="grid grid-cols-2 gap-4" animation="scale" staggerDelay={150}>
               <Card className="glass p-8 text-center card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
                   <Users className="w-8 h-8 text-primary-foreground" />
@@ -252,17 +234,7 @@ export default function Index() {
               <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
                 Join thousands of educators already using Teacher's Desk to create better learning experiences.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="xl" variant="gradient" asChild className="group">
-                  <Link to="/auth" className="flex items-center gap-2">
-                    Start Free Trial
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button size="xl" variant="glass" asChild>
-                  <Link to="/auth">Schedule Demo</Link>
-                </Button>
-              </div>
+              
             </div>
           </ScrollReveal>
         </div>
@@ -282,6 +254,5 @@ export default function Index() {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 }
