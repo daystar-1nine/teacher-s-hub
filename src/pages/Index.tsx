@@ -29,9 +29,9 @@ const features = [
 ];
 
 const stats = [
-  { value: '10K+', label: 'Students', icon: Users },
-  { value: '500+', label: 'Teachers', icon: GraduationCap },
-  { value: '50K+', label: 'AI Queries', icon: Brain },
+  { value: '100+', label: 'Schools', icon: Users },
+  { value: '1K+', label: 'Educators', icon: GraduationCap },
+  { value: '10K+', label: 'AI Queries', icon: Brain },
   { value: '99.9%', label: 'Uptime', icon: Shield },
 ];
 
@@ -219,21 +219,21 @@ export default function Index() {
                 <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
                   <Users className="w-8 h-8 text-primary-foreground" />
                 </div>
-                <p className="text-4xl font-black text-gradient">500+</p>
+                <p className="text-4xl font-black text-gradient">100+</p>
                 <p className="text-muted-foreground mt-1">Active Schools</p>
               </Card>
               <Card className="glass p-8 text-center card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-accent flex items-center justify-center mx-auto mb-4 shadow-glow-accent">
                   <GraduationCap className="w-8 h-8 text-accent-foreground" />
                 </div>
-                <p className="text-4xl font-black text-gradient-accent">2K+</p>
-                <p className="text-muted-foreground mt-1">Teachers</p>
+                <p className="text-4xl font-black text-gradient-accent">1K+</p>
+                <p className="text-muted-foreground mt-1">Educators</p>
               </Card>
               <Card className="glass p-8 text-center col-span-2 card-hover">
                 <div className="w-16 h-16 rounded-2xl gradient-cyber flex items-center justify-center mx-auto mb-4 shadow-glow-cyan">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
-                <p className="text-4xl font-black text-gradient-cyber">1M+</p>
+                <p className="text-4xl font-black text-gradient-cyber">50K+</p>
                 <p className="text-muted-foreground mt-1">AI Explanations Generated</p>
               </Card>
             </ScrollRevealGroup>

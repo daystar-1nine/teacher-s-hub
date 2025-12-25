@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (schoolError || !school) {
-        return { success: false, error: 'Invalid school code. Try: DEMO2024' };
+        return { success: false, error: 'Invalid school code. Please contact your school administrator for the correct code.' };
       }
 
       const redirectUrl = `${window.location.origin}/`;

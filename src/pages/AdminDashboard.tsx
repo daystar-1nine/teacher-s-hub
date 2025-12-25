@@ -33,10 +33,10 @@ export default function AdminDashboard() {
   ];
 
   const quickActions = [
-    { icon: UserPlus, label: 'Add Teacher', href: '/students', variant: 'default' as const },
+    { icon: School, label: 'Manage Schools', href: '/schools', variant: 'default' as const },
+    { icon: UserPlus, label: 'Add Teacher', href: '/students', variant: 'secondary' as const },
     { icon: GraduationCap, label: 'Manage Classes', href: '/classes', variant: 'secondary' as const },
-    { icon: Megaphone, label: 'Announcements', href: '/announcements', variant: 'secondary' as const },
-    { icon: Settings, label: 'Settings', href: '/settings', variant: 'outline' as const },
+    { icon: Megaphone, label: 'Announcements', href: '/announcements', variant: 'outline' as const },
   ];
 
   const recentActivity = [
@@ -205,11 +205,11 @@ export default function AdminDashboard() {
                 <div className="pt-4 border-t border-border">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">School Code</span>
-                    <span className="font-mono font-medium">{profile?.school_code || 'DEMO2024'}</span>
+                    <span className="font-mono font-medium">{profile?.school_code || '—'}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-2">
                     <span className="text-muted-foreground">Academic Year</span>
-                    <span className="font-medium">2024-25</span>
+                    <span className="font-medium">{new Date().getFullYear()}-{(new Date().getFullYear() + 1).toString().slice(-2)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -228,20 +228,20 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link to="/schools" className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group">
+                  <School className="w-8 h-8 text-primary mb-2 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-medium">School Management</h3>
+                  <p className="text-sm text-muted-foreground">Create & manage schools</p>
+                </Link>
                 <Link to="/activity-logs" className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group">
-                  <Activity className="w-8 h-8 text-primary mb-2 group-hover:scale-110 transition-transform" />
+                  <Activity className="w-8 h-8 text-accent mb-2 group-hover:scale-110 transition-transform" />
                   <h3 className="font-medium">Activity Logs</h3>
                   <p className="text-sm text-muted-foreground">View all system activities</p>
                 </Link>
                 <Link to="/health-report" className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group">
-                  <BarChart3 className="w-8 h-8 text-accent mb-2 group-hover:scale-110 transition-transform" />
+                  <BarChart3 className="w-8 h-8 text-success mb-2 group-hover:scale-110 transition-transform" />
                   <h3 className="font-medium">Health Report</h3>
                   <p className="text-sm text-muted-foreground">AI-generated insights</p>
-                </Link>
-                <Link to="/classes" className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group">
-                  <GraduationCap className="w-8 h-8 text-success mb-2 group-hover:scale-110 transition-transform" />
-                  <h3 className="font-medium">Class Management</h3>
-                  <p className="text-sm text-muted-foreground">Manage all classes</p>
                 </Link>
                 <Link to="/settings" className="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all group">
                   <Settings className="w-8 h-8 text-warning mb-2 group-hover:scale-110 transition-transform" />
