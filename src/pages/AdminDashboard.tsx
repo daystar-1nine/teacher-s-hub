@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAdminDashboardStats } from '@/hooks/useAdminDashboardStats';
+import { InviteTeacherDialog } from '@/components/admin/InviteTeacherDialog';
+import { RoleManagementDialog } from '@/components/admin/RoleManagementDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   Users, 
   GraduationCap,
@@ -20,31 +27,79 @@ import {
   CheckCircle2,
   Clock,
   ArrowRight,
+  Mail,
+  UserCog,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { profile } = useAuth();
+  const { stats, recentActivity, isLoading } = useAdminDashboardStats();
 
-  const stats = [
-    { icon: Users, label: 'Total Users', value: '156', change: '+12 this month', color: 'bg-primary/10 text-primary' },
-    { icon: GraduationCap, label: 'Active Classes', value: '24', change: '8 sections', color: 'bg-accent/10 text-accent' },
-    { icon: CheckCircle2, label: 'Attendance Rate', value: '94%', change: '+2% from last week', color: 'bg-success/10 text-success' },
-    { icon: TrendingUp, label: 'Avg. Performance', value: '78%', change: '+5% improvement', color: 'bg-warning/10 text-warning' },
+  // Fetch school name
+  const { data: school } = useQuery({
+    queryKey: ['school', profile?.school_code],
+    queryFn: async () => {
+      if (!profile?.school_code) return null;
+      const { data } = await supabase
+        .from('schools')
+        .select('name')
+        .eq('code', profile.school_code)
+        .single();
+      return data;
+    },
+    enabled: !!profile?.school_code,
+  });
+
+  const statCards = [
+    { 
+      icon: Users, 
+      label: 'Total Users', 
+      value: isLoading ? null : stats.totalUsers.toString(), 
+      change: `${stats.teacherCount} teachers, ${stats.studentCount} students`, 
+      color: 'bg-primary/10 text-primary' 
+    },
+    { 
+      icon: GraduationCap, 
+      label: 'Active Classes', 
+      value: isLoading ? null : stats.activeClasses.toString(), 
+      change: `${stats.subjectsCount} subjects`, 
+      color: 'bg-accent/10 text-accent' 
+    },
+    { 
+      icon: CheckCircle2, 
+      label: 'Attendance Rate', 
+      value: isLoading ? null : `${stats.attendanceRate}%`, 
+      change: 'Last 30 days', 
+      color: 'bg-success/10 text-success' 
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Avg. Performance', 
+      value: isLoading ? null : `${stats.avgPerformance}%`, 
+      change: 'All exams', 
+      color: 'bg-warning/10 text-warning' 
+    },
   ];
 
   const quickActions = [
     { icon: School, label: 'Manage Schools', href: '/schools', variant: 'default' as const },
-    { icon: UserPlus, label: 'Add Teacher', href: '/students', variant: 'secondary' as const },
     { icon: GraduationCap, label: 'Manage Classes', href: '/classes', variant: 'secondary' as const },
     { icon: Megaphone, label: 'Announcements', href: '/announcements', variant: 'outline' as const },
   ];
 
-  const recentActivity = [
-    { icon: UserPlus, text: 'New teacher Priya Sharma joined', time: '2 hours ago', type: 'success' },
-    { icon: AlertTriangle, text: 'Class 10B attendance below 80%', time: '5 hours ago', type: 'warning' },
-    { icon: FileText, text: 'Monthly health report generated', time: '1 day ago', type: 'info' },
-    { icon: Shield, text: 'Security settings updated', time: '2 days ago', type: 'info' },
-  ];
+  const getActivityIcon = (entityType: string, action: string) => {
+    if (entityType === 'user' || entityType === 'profile') return UserPlus;
+    if (entityType === 'attendance') return CheckCircle2;
+    if (entityType === 'exam') return FileText;
+    if (action.includes('warning') || action.includes('alert')) return AlertTriangle;
+    return Activity;
+  };
+
+  const getActivityType = (action: string) => {
+    if (action.includes('create') || action.includes('join')) return 'success';
+    if (action.includes('warning') || action.includes('alert') || action.includes('delete')) return 'warning';
+    return 'info';
+  };
 
   const firstName = profile?.name?.split(' ')[0] || 'Admin';
 
@@ -85,7 +140,7 @@ export default function AdminDashboard() {
           animation="scale"
           staggerDelay={80}
         >
-          {stats.map((stat) => (
+          {statCards.map((stat) => (
             <Card 
               key={stat.label} 
               variant="interactive"
@@ -95,7 +150,11 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                    {stat.value === null ? (
+                      <Skeleton className="h-9 w-16 mt-1" />
+                    ) : (
+                      <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
                   </div>
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.color}`}>
@@ -120,7 +179,7 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 {quickActions.map((action) => (
                   <Button key={action.label} variant={action.variant} asChild className="h-auto py-4 flex-col gap-2">
                     <Link to={action.href}>
@@ -129,6 +188,22 @@ export default function AdminDashboard() {
                     </Link>
                   </Button>
                 ))}
+                
+                {/* Invite Teacher Button */}
+                <InviteTeacherDialog schoolName={school?.name || 'Your School'}>
+                  <Button variant="secondary" className="h-auto py-4 flex-col gap-2">
+                    <Mail className="w-5 h-5" />
+                    <span className="text-sm">Invite Teacher</span>
+                  </Button>
+                </InviteTeacherDialog>
+
+                {/* Role Management Button */}
+                <RoleManagementDialog>
+                  <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+                    <UserCog className="w-5 h-5" />
+                    <span className="text-sm">Manage Roles</span>
+                  </Button>
+                </RoleManagementDialog>
               </div>
             </CardContent>
           </Card>
@@ -149,26 +224,51 @@ export default function AdminDashboard() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-start gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        activity.type === 'success' ? 'bg-success/10 text-success' :
-                        activity.type === 'warning' ? 'bg-warning/10 text-warning' :
-                        'bg-primary/10 text-primary'
-                      }`}>
-                        <activity.icon className="w-5 h-5" />
+                {isLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-start gap-4 p-3">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/4 mt-2" />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{activity.text}</p>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No recent activity
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity) => {
+                      const Icon = getActivityIcon(activity.entity_type, activity.action);
+                      const type = getActivityType(activity.action);
+                      
+                      return (
+                        <div key={activity.id} className="flex items-start gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            type === 'success' ? 'bg-success/10 text-success' :
+                            type === 'warning' ? 'bg-warning/10 text-warning' :
+                            'bg-primary/10 text-primary'
+                          }`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm capitalize">
+                              {activity.action.replace(/_/g, ' ')} - {activity.entity_type}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </ScrollReveal>
@@ -185,19 +285,35 @@ export default function AdminDashboard() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-primary">12</p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      <p className="text-2xl font-bold text-primary">{stats.teacherCount}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">Teachers</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-accent">144</p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      <p className="text-2xl font-bold text-accent">{stats.studentCount}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">Students</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-success">8</p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      <p className="text-2xl font-bold text-success">{stats.activeClasses}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">Classes</p>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-2xl font-bold text-warning">15</p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      <p className="text-2xl font-bold text-warning">{stats.subjectsCount}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">Subjects</p>
                   </div>
                 </div>
