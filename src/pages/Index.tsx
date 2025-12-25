@@ -112,20 +112,6 @@ export default function Index() {
             </p>
           </ScrollReveal>
           
-          {/* CTA Buttons */}
-          <ScrollReveal animation="fade-up" delay={300}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-              <Button size="xl" variant="gradient" asChild className="group">
-                <Link to="/auth" className="flex items-center gap-2">
-                  Start Free 
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="xl" variant="neon-outline" asChild>
-                <Link to="/auth">Watch Demo</Link>
-              </Button>
-            </div>
-          </ScrollReveal>
 
           {/* Stats Row */}
           <ScrollRevealGroup className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto" animation="fade-up" staggerDelay={100}>
