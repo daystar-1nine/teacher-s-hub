@@ -231,9 +231,7 @@ export default function Index() {
               <h2 className="font-display text-4xl md:text-5xl font-black mb-6">
                 Ready to <span className="text-gradient">Transform</span> Your Classroom?
               </h2>
-              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-                Join thousands of educators already using Teacher's Desk to create better learning experiences.
-              </p>
+              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">© 2025 Teacher's Desk. Built with ❤️ for educators.</p>
               
             </div>
           </ScrollReveal>
