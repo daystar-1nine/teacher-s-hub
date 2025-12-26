@@ -9,6 +9,7 @@ import { ScrollReveal, ScrollRevealGroup } from '@/components/ScrollReveal';
 import { TeacherManagement } from '@/components/admin/TeacherManagement';
 import { InviteTeacherDialog } from '@/components/admin/InviteTeacherDialog';
 import { RoleManagementDialog } from '@/components/admin/RoleManagementDialog';
+import { cn } from '@/lib/utils';
 import { 
   Users, 
   GraduationCap,
@@ -22,10 +23,64 @@ import {
   UserCog,
   ShieldCheck,
   TrendingUp,
+  ArrowUpRight,
 } from 'lucide-react';
 
+// Memoized stat card for performance
+function StatCard({ 
+  icon: Icon, 
+  label, 
+  value, 
+  description, 
+  color, 
+  href 
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | null;
+  description: string;
+  color: string;
+  href?: string;
+}) {
+  const content = (
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          {value === null ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <p className="text-3xl font-bold tracking-tight">{value}</p>
+          )}
+          <p className="text-xs text-muted-foreground/80">{description}</p>
+        </div>
+        <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0", color)}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+      {href && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <span className="text-xs text-primary font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+            View details <ArrowUpRight className="w-3 h-3" />
+          </span>
+        </div>
+      )}
+    </CardContent>
+  );
+
+  if (href) {
+    return (
+      <Card className="group hover:shadow-lg hover:border-primary/30 transition-all duration-300 cursor-pointer overflow-hidden">
+        <Link to={href}>{content}</Link>
+      </Card>
+    );
+  }
+
+  return <Card className="overflow-hidden">{content}</Card>;
+}
+
 export default function SchoolAdminDashboard() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const { 
     adminProfile,
     teachers, 
@@ -45,7 +100,7 @@ export default function SchoolAdminDashboard() {
       icon: Users, 
       label: 'Teachers', 
       value: isLoading ? null : teachers.length.toString(), 
-      description: 'Active teachers in your school', 
+      description: 'Active in your school', 
       color: 'bg-primary/10 text-primary',
       href: '#teachers',
     },
@@ -69,27 +124,30 @@ export default function SchoolAdminDashboard() {
       icon: TrendingUp, 
       label: 'School Code', 
       value: profile?.school_code || '—', 
-      description: 'Share with teachers', 
+      description: 'Share with staff', 
       color: 'bg-warning/10 text-warning',
     },
   ];
 
   const quickActions = [
-    { icon: CalendarCheck, label: 'Attendance', href: '/attendance', description: 'View attendance records' },
-    { icon: BarChart3, label: 'Analytics', href: '/analytics', description: 'Performance insights' },
-    { icon: Megaphone, label: 'Announcements', href: '/announcements', description: 'School-wide messages' },
-    { icon: Settings, label: 'Settings', href: '/settings', description: 'School configuration' },
+    { icon: CalendarCheck, label: 'Attendance', href: '/attendance' },
+    { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+    { icon: Megaphone, label: 'Announcements', href: '/announcements' },
+    { icon: Settings, label: 'Settings', href: '/settings' },
   ];
 
   if (isLoading) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-32" />
           </div>
-          <Skeleton className="h-96" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+          </div>
+          <Skeleton className="h-80 rounded-xl" />
         </div>
       </DashboardLayout>
     );
@@ -97,31 +155,33 @@ export default function SchoolAdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="space-y-8">
+        {/* Header Section */}
         <ScrollReveal animation="fade-up">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold text-foreground font-display">
-                  Welcome, <span className="text-gradient">{firstName}</span>!
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+                  Welcome back, <span className="text-gradient">{firstName}</span>
                 </h1>
-                <ShieldCheck className="h-6 w-6 text-primary" />
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                </div>
               </div>
-              <p className="text-muted-foreground mt-1">
-                {school?.name || 'Your School'} — School Admin Dashboard
+              <p className="text-muted-foreground">
+                {school?.name || 'Your School'} • School Administration
               </p>
             </div>
             <div className="flex gap-2">
               {isSuperAdmin && (
-                <Button variant="outline" asChild>
+                <Button variant="outline" size="sm" asChild>
                   <Link to="/admin-dashboard">
                     <ShieldCheck className="w-4 h-4 mr-2" />
                     Super Admin
                   </Link>
                 </Button>
               )}
-              <Button variant="gradient" asChild>
+              <Button variant="default" size="sm" asChild>
                 <Link to="/settings">
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
@@ -135,91 +195,56 @@ export default function SchoolAdminDashboard() {
         <ScrollRevealGroup 
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
           animation="scale"
-          staggerDelay={80}
+          staggerDelay={60}
         >
           {statCards.map((stat) => (
-            <Card 
-              key={stat.label} 
-              variant="interactive"
-              className="card-hover"
-            >
-              {stat.href ? (
-                <Link to={stat.href}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        {stat.value === null ? (
-                          <Skeleton className="h-9 w-16 mt-1" />
-                        ) : (
-                          <p className="text-3xl font-bold mt-1">{stat.value}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                      </div>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.color}`}>
-                        <stat.icon className="w-6 h-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Link>
-              ) : (
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                      {stat.value === null ? (
-                        <Skeleton className="h-9 w-16 mt-1" />
-                      ) : (
-                        <p className="text-3xl font-bold mt-1 font-mono">{stat.value}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-                    </div>
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.color}`}>
-                      <stat.icon className="w-6 h-6" />
-                    </div>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
+            <StatCard key={stat.label} {...stat} />
           ))}
         </ScrollRevealGroup>
 
-        {/* Quick Actions */}
+        {/* Quick Actions Bar */}
         <ScrollReveal animation="fade-up" delay={100}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <School className="w-5 h-5 text-primary" />
-                School Admin Actions
-              </CardTitle>
-              <CardDescription>
-                Quick access to school management features
-              </CardDescription>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <School className="w-5 h-5 text-primary" />
+                    Quick Actions
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Manage your school efficiently
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {quickActions.map((action) => (
-                  <Button key={action.label} variant="outline" asChild className="h-auto py-4 flex-col gap-2">
+                  <Button 
+                    key={action.label} 
+                    variant="outline" 
+                    asChild 
+                    className="h-auto py-3 flex-col gap-1.5 hover:bg-muted/50 hover:border-primary/30"
+                  >
                     <Link to={action.href}>
-                      <action.icon className="w-5 h-5" />
-                      <span className="text-sm">{action.label}</span>
+                      <action.icon className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-xs font-medium">{action.label}</span>
                     </Link>
                   </Button>
                 ))}
                 
-                {/* Invite Teacher Button */}
                 <InviteTeacherDialog schoolName={school?.name || 'Your School'}>
-                  <Button variant="secondary" className="h-auto py-4 flex-col gap-2">
+                  <Button variant="secondary" className="h-auto py-3 flex-col gap-1.5">
                     <Mail className="w-5 h-5" />
-                    <span className="text-sm">Invite Teacher</span>
+                    <span className="text-xs font-medium">Invite Teacher</span>
                   </Button>
                 </InviteTeacherDialog>
 
-                {/* Role Management Button */}
                 <RoleManagementDialog>
-                  <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-                    <UserCog className="w-5 h-5" />
-                    <span className="text-sm">Manage Roles</span>
+                  <Button variant="outline" className="h-auto py-3 flex-col gap-1.5 hover:bg-muted/50 hover:border-primary/30">
+                    <UserCog className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-xs font-medium">Manage Roles</span>
                   </Button>
                 </RoleManagementDialog>
               </div>
