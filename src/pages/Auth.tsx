@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, memo, forwardRef } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ const AuthLogo = memo(({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
 ));
 AuthLogo.displayName = 'AuthLogo';
 
-// Password input with toggle - properly using forwardRef
+// Password input with toggle - memoized
 interface PasswordInputProps {
   id: string;
   value: string;
@@ -64,12 +64,19 @@ interface PasswordInputProps {
   onToggleShow: () => void;
 }
 
-const PasswordInput = memo(forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ id, value, onChange, placeholder = '••••••••', disabled = false, showPassword, onToggleShow }, ref) => (
+function PasswordInputComponent({ 
+  id, 
+  value, 
+  onChange, 
+  placeholder = '••••••••', 
+  disabled = false, 
+  showPassword, 
+  onToggleShow 
+}: PasswordInputProps) {
+  return (
     <div className="relative">
       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
       <Input
-        ref={ref}
         id={id}
         type={showPassword ? 'text' : 'password'}
         placeholder={placeholder}
@@ -86,9 +93,10 @@ const PasswordInput = memo(forwardRef<HTMLInputElement, PasswordInputProps>(
         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
-  )
-));
-PasswordInput.displayName = 'PasswordInput';
+  );
+}
+
+const PasswordInput = memo(PasswordInputComponent);
 
 const Auth = () => {
   const { login, signup, resetPassword, updatePassword, isAuthenticated, isLoading: authLoading, appRole } = useAuth();
