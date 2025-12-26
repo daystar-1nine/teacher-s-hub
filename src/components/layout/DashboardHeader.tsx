@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,12 @@ export const DashboardHeader = memo(function DashboardHeader({
 }: DashboardHeaderProps) {
   const { profile, appRole, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate('/');
+  }, [logout, navigate]);
   
   const currentTitle = routeTitles[location.pathname] || 'Dashboard';
   const initials = profile?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
@@ -169,7 +175,7 @@ export const DashboardHeader = memo(function DashboardHeader({
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={logout}
+              onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sign out</span>
