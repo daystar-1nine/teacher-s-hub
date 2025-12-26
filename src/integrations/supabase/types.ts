@@ -1036,6 +1036,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_teachers: {
+        Args: { _school_code: string; _user_id: string }
+        Returns: boolean
+      }
       get_admin_profile: {
         Args: never
         Returns: {
@@ -1045,6 +1049,19 @@ export type Database = {
           is_super_admin: boolean
           name: string
           school_code: string
+        }[]
+      }
+      get_admin_school_code: { Args: { _user_id: string }; Returns: string }
+      get_school_admin_profile: {
+        Args: { _user_id: string }
+        Returns: {
+          admin_role: string
+          can_manage_teachers: boolean
+          can_view_reports: boolean
+          can_view_students: boolean
+          is_super_admin: boolean
+          school_code: string
+          user_id: string
         }[]
       }
       get_user_app_role: {
@@ -1072,6 +1089,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_any_school_admin: { Args: { _user_id: string }; Returns: boolean }
       is_school_admin: {
         Args: { _school_code: string; _user_id: string }
         Returns: boolean
