@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -231,6 +231,7 @@ const NavItemComponent = memo(function NavItemComponent({
 export function Sidebar({ isCollapsed, onCollapsedChange }: SidebarProps) {
   const { profile, appRole, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -256,6 +257,11 @@ export function Sidebar({ isCollapsed, onCollapsedChange }: SidebarProps) {
   }, []);
 
   const closeMobile = useCallback(() => setIsMobileOpen(false), []);
+  
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate('/');
+  }, [logout, navigate]);
 
   // Get navigation groups based on role
   const getNavGroups = (): NavGroup[] => {
@@ -362,7 +368,7 @@ export function Sidebar({ isCollapsed, onCollapsedChange }: SidebarProps) {
             "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
             !isCollapsed && "justify-start"
           )}
-          onClick={logout}
+          onClick={handleLogout}
         >
           <LogOut className="w-5 h-5" />
           {!isCollapsed && <span className="ml-3">Sign Out</span>}
