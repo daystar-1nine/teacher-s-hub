@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -67,7 +68,7 @@ const teacherAdminItems: NavItem[] = [
   { icon: Megaphone, label: 'Announcements', href: '/announcements', roles: ['teacher'] },
 ];
 
-// Admin navigation items
+// Admin navigation items - ISOLATED from teacher/student
 const adminNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin-dashboard', roles: ['admin'] },
   { icon: Users, label: 'All Users', href: '/students', roles: ['admin'] },
@@ -79,7 +80,7 @@ const adminNavItems: NavItem[] = [
   { icon: Megaphone, label: 'Announcements', href: '/announcements', roles: ['admin'] },
 ];
 
-// Admin tools section
+// Admin tools section - ADMIN ONLY (verified via server-side check)
 const adminToolItems: NavItem[] = [
   { icon: School, label: 'Schools', href: '/schools', roles: ['admin'] },
   { icon: Activity, label: 'Activity Logs', href: '/activity-logs', roles: ['admin'] },
@@ -87,17 +88,53 @@ const adminToolItems: NavItem[] = [
   { icon: Settings, label: 'Settings', href: '/settings', roles: ['admin'] },
 ];
 
+interface AdminProfile {
+  name: string;
+  is_super_admin: boolean;
+}
+
 export function Sidebar() {
   const { profile, appRole, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  
+  // Server-side verified admin status
+  const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+
+  // Check admin status via server-side RPC on mount
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_admin_profile');
+        if (!error && data && data.length > 0 && data[0].is_active) {
+          setIsVerifiedAdmin(true);
+          setAdminProfile({
+            name: data[0].name,
+            is_super_admin: data[0].is_super_admin,
+          });
+        } else {
+          setIsVerifiedAdmin(false);
+          setAdminProfile(null);
+        }
+      } catch (error) {
+        setIsVerifiedAdmin(false);
+        setAdminProfile(null);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
 
   // Get navigation items based on role
+  // SECURITY: Admin items only shown if server-side verified
   const getNavItems = (): NavItem[] => {
+    if (isVerifiedAdmin) {
+      return adminNavItems;
+    }
     switch (appRole) {
-      case 'admin':
-        return adminNavItems;
       case 'teacher':
         return teacherNavItems;
       case 'student':
@@ -107,23 +144,28 @@ export function Sidebar() {
   };
 
   const getAdminSectionItems = (): NavItem[] => {
-    switch (appRole) {
-      case 'admin':
-        return adminToolItems;
-      case 'teacher':
-        return teacherAdminItems;
-      default:
-        return [];
+    // SECURITY: Only show admin tools if server-side verified as admin
+    if (isVerifiedAdmin) {
+      return adminToolItems;
     }
+    if (appRole === 'teacher') {
+      return teacherAdminItems;
+    }
+    return [];
   };
 
   const navItems = getNavItems();
   const adminSectionItems = getAdminSectionItems();
 
   const getRoleBadge = () => {
+    // Use server-verified admin status
+    if (isVerifiedAdmin) {
+      return { 
+        label: adminProfile?.is_super_admin ? 'Super Admin' : 'Admin', 
+        color: 'bg-destructive/10 text-destructive' 
+      };
+    }
     switch (appRole) {
-      case 'admin':
-        return { label: 'Admin', color: 'bg-destructive/10 text-destructive' };
       case 'teacher':
         return { label: 'Teacher', color: 'bg-primary/10 text-primary' };
       case 'student':
@@ -134,6 +176,9 @@ export function Sidebar() {
 
   const roleBadge = getRoleBadge();
 
+  // Display name - use admin profile name if verified admin
+  const displayName = isVerifiedAdmin && adminProfile ? adminProfile.name : profile?.name;
+
   const NavContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -141,13 +186,24 @@ export function Sidebar() {
         "flex items-center gap-3 px-4 py-6 border-b border-sidebar-border",
         isCollapsed && "justify-center px-2"
       )}>
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl gradient-primary shadow-glow">
-          <GraduationCap className="w-6 h-6 text-primary-foreground" />
+        <div className={cn(
+          "flex items-center justify-center w-10 h-10 rounded-xl shadow-glow",
+          isVerifiedAdmin ? "bg-destructive" : "gradient-primary"
+        )}>
+          {isVerifiedAdmin ? (
+            <Shield className="w-6 h-6 text-destructive-foreground" />
+          ) : (
+            <GraduationCap className="w-6 h-6 text-primary-foreground" />
+          )}
         </div>
         {!isCollapsed && (
           <div className="flex flex-col">
-            <span className="font-bold text-lg text-sidebar-foreground">Teacher's Desk</span>
-            <span className="text-xs text-sidebar-foreground/60">Education Platform</span>
+            <span className="font-bold text-lg text-sidebar-foreground">
+              {isVerifiedAdmin ? "Admin Portal" : "Teacher's Desk"}
+            </span>
+            <span className="text-xs text-sidebar-foreground/60">
+              {isVerifiedAdmin ? "Administration" : "Education Platform"}
+            </span>
           </div>
         )}
       </div>
@@ -254,15 +310,21 @@ export function Sidebar() {
         "border-t border-sidebar-border p-4",
         isCollapsed && "px-2"
       )}>
-        {!isCollapsed && profile && (
+        {!isCollapsed && (profile || adminProfile) && (
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-              <span className="text-sm font-semibold text-sidebar-foreground">
-                {profile.name?.charAt(0) || 'U'}
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center",
+              isVerifiedAdmin ? "bg-destructive/20" : "bg-sidebar-accent"
+            )}>
+              <span className={cn(
+                "text-sm font-semibold",
+                isVerifiedAdmin ? "text-destructive" : "text-sidebar-foreground"
+              )}>
+                {displayName?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile.name}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{displayName}</p>
               <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", roleBadge.color)}>
                 {roleBadge.label}
               </span>

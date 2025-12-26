@@ -3,6 +3,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'teacher' | 'student';
+// NOTE: Admin role is handled separately via AdminAuthContext
+// This AppRole is kept for backwards compatibility but admin signup is blocked
 export type AppRole = 'admin' | 'teacher' | 'student';
 
 export interface Profile {
@@ -180,6 +182,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     schoolCode: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      // SECURITY: Block admin signup via public form
+      // Admins MUST be created by super admins through the admin portal
+      if (role === 'admin') {
+        return { 
+          success: false, 
+          error: 'Admin accounts cannot be created through this form. Contact a super administrator.' 
+        };
+      }
+
       // Validate school code
       const { data: school, error: schoolError } = await supabase
         .from('schools')
@@ -193,8 +204,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const redirectUrl = `${window.location.origin}/`;
 
-      // Map app_role to user_role for profiles table
-      const profileRole: UserRole = role === 'admin' ? 'teacher' : role === 'teacher' ? 'teacher' : 'student';
+      // Only allow teacher or student roles
+      const profileRole: UserRole = role === 'teacher' ? 'teacher' : 'student';
 
       const { data, error } = await supabase.auth.signUp({
         email,

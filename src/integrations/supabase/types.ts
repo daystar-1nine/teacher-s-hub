@@ -53,6 +53,47 @@ export type Database = {
         }
         Relationships: []
       }
+      admins: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          is_super_admin: boolean | null
+          name: string
+          school_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          is_active?: boolean | null
+          is_super_admin?: boolean | null
+          name: string
+          school_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          is_super_admin?: boolean | null
+          name?: string
+          school_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admins_school_code_fkey"
+            columns: ["school_code"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           attachments: string[] | null
@@ -995,6 +1036,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_profile: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          is_active: boolean
+          is_super_admin: boolean
+          name: string
+          school_code: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1010,10 +1062,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_school_admin: {
         Args: { _school_code: string; _user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       admin_role: "super_admin" | "school_admin" | "teacher" | "student"
