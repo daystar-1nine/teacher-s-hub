@@ -56,8 +56,12 @@ export default function Auth() {
 
   // Redirect based on role after authentication
   if (isAuthenticated && appRole) {
+    // SECURITY: Redirect admins to admin portal - they should NOT use this login
+    if (appRole === 'admin') {
+      return <Navigate to="/admin/login" replace />;
+    }
+    
     const redirectPath = 
-      appRole === 'admin' ? '/admin-dashboard' :
       appRole === 'teacher' ? '/teacher-dashboard' :
       '/student-dashboard';
     return <Navigate to={redirectPath} replace />;
@@ -508,7 +512,7 @@ export default function Auth() {
                       </div>
                     </RadioGroup>
                     <p className="text-xs text-muted-foreground">
-                      Note: Admin accounts are created by existing admins only.
+                      Admin? <a href="/admin/login" className="text-primary hover:underline">Use the admin portal</a>
                     </p>
                   </div>
 

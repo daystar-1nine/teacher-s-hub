@@ -5,9 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/RequireRole";
+import { RequireAdmin } from "@/components/RequireAdmin";
 import { CommandPalette } from "@/components/CommandPalette";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AdminAuth from "./pages/AdminAuth";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -39,12 +41,26 @@ const App = () => (
         <BrowserRouter>
           <CommandPalette />
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            
+            {/* ISOLATED Admin Route - Completely separate login */}
+            <Route path="/admin/login" element={<AdminAuth />} />
+            
+            {/* Student/Teacher Dashboard Routes */}
             <Route path="/student-dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
             <Route path="/teacher-dashboard" element={<RequireAuth><TeacherDashboard /></RequireAuth>} />
-            <Route path="/admin-dashboard" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
             <Route path="/dashboard" element={<Navigate to="/student-dashboard" replace />} />
+            
+            {/* Admin-Only Routes - Protected by RequireAdmin */}
+            <Route path="/admin-dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+            <Route path="/schools" element={<RequireAdmin><SchoolManagement /></RequireAdmin>} />
+            <Route path="/activity-logs" element={<RequireAdmin><ActivityLogs /></RequireAdmin>} />
+            <Route path="/health-report" element={<RequireAdmin><SchoolHealthReport /></RequireAdmin>} />
+            <Route path="/settings" element={<RequireAdmin><SchoolSettings /></RequireAdmin>} />
+            
+            {/* Shared Routes (Teacher & Admin) */}
             <Route path="/attendance" element={<RequireAuth><Attendance /></RequireAuth>} />
             <Route path="/homework" element={<RequireAuth><Homework /></RequireAuth>} />
             <Route path="/exams" element={<RequireAuth><Exams /></RequireAuth>} />
@@ -54,12 +70,9 @@ const App = () => (
             <Route path="/meet" element={<RequireAuth><Meet /></RequireAuth>} />
             <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
             <Route path="/question-paper" element={<RequireAuth><QuestionPaper /></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><SchoolSettings /></RequireAuth>} />
-            <Route path="/schools" element={<RequireAuth><SchoolManagement /></RequireAuth>} />
             <Route path="/classes" element={<RequireAuth><ClassManagement /></RequireAuth>} />
-            <Route path="/activity-logs" element={<RequireAuth><ActivityLogs /></RequireAuth>} />
-            <Route path="/health-report" element={<RequireAuth><SchoolHealthReport /></RequireAuth>} />
             <Route path="/announcements" element={<RequireAuth><Announcements /></RequireAuth>} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
