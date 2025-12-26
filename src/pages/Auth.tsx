@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { GraduationCap, Mail, Lock, User, Building2, Eye, EyeOff, Loader2, ArrowLeft, KeyRound } from 'lucide-react';
 
-export default function Auth() {
+const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   const { login, signup, resetPassword, updatePassword, isAuthenticated, isLoading: authLoading, appRole } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -538,4 +538,8 @@ export default function Auth() {
       </div>
     </div>
   );
-}
+});
+
+Auth.displayName = 'Auth';
+
+export default Auth;

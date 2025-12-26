@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,16 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Shield, Mail, Lock, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-export default function AdminAuth() {
+const AdminAuth = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
 
   // Check if already authenticated as admin
   useEffect(() => {
@@ -57,7 +59,14 @@ export default function AdminAuth() {
       });
 
       if (authError) {
-        toast.error(authError.message);
+        // Provide specific error messages
+        if (authError.message.includes('Invalid login')) {
+          toast.error('Invalid email or password. Please try again.');
+        } else if (authError.message.includes('Email not confirmed')) {
+          toast.error('Please verify your email address first.');
+        } else {
+          toast.error(authError.message);
+        }
         setIsSubmitting(false);
         return;
       }
@@ -77,7 +86,7 @@ export default function AdminAuth() {
 
       if (!adminProfile.is_active) {
         await supabase.auth.signOut();
-        toast.error('Your admin account has been deactivated.');
+        toast.error('Your admin account has been deactivated. Contact a super administrator.');
         setIsSubmitting(false);
         return;
       }
@@ -86,14 +95,43 @@ export default function AdminAuth() {
       navigate('/admin-dashboard', { replace: true });
     } catch (error) {
       console.error('Admin login error:', error);
-      toast.error('An unexpected error occurred');
+      toast.error('Connection error. Please check your internet and try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/admin/login?mode=reset`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Password reset email sent! Check your inbox.');
+        setShowForgotPassword(false);
+        setResetEmail('');
+      }
+    } catch (error) {
+      toast.error('Failed to send reset email. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div ref={ref} className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-destructive/20 animate-pulse flex items-center justify-center">
             <Shield className="w-6 h-6 text-destructive" />
@@ -104,8 +142,77 @@ export default function AdminAuth() {
     );
   }
 
+  // Forgot password form
+  if (showForgotPassword) {
+    return (
+      <div ref={ref} className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-destructive/10 blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-destructive/5 blur-3xl" />
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
+          <div className="flex flex-col items-center mb-8 animate-slide-up">
+            <div className="w-16 h-16 rounded-2xl bg-destructive shadow-lg flex items-center justify-center mb-4">
+              <Mail className="w-9 h-9 text-destructive-foreground" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground">Reset Password</h1>
+            <p className="text-muted-foreground mt-1">We'll send you a reset link</p>
+          </div>
+
+          <Card variant="elevated" className="animate-scale-in border-destructive/20">
+            <CardContent className="pt-6">
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Admin Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="admin@school.edu"
+                      className="pl-10"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </Button>
+
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full" 
+                  onClick={() => setShowForgotPassword(false)}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Login
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div ref={ref} className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       {/* Background decoration - different from regular auth */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-destructive/10 blur-3xl" />
@@ -162,7 +269,16 @@ export default function AdminAuth() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="admin-password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="admin-password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -223,4 +339,8 @@ export default function AdminAuth() {
       </div>
     </div>
   );
-}
+});
+
+AdminAuth.displayName = 'AdminAuth';
+
+export default AdminAuth;
