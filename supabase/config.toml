@@ -14,3 +14,12 @@ verify_jwt = true
 
 [functions.generate-school-report]
 verify_jwt = true
+
+[functions.create-admin]
+verify_jwt = true
+
+[functions.seed-super-admin]
+verify_jwt = false
+
+[functions.send-teacher-invitation]
+verify_jwt = true
