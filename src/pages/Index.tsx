@@ -71,6 +71,12 @@ export default function Index() {
             <span className="font-display font-bold text-xl text-gradient">Teacher's Desk</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground hidden sm:flex">
+              <Link to="/admin/login" className="flex items-center gap-1">
+                <Shield className="w-4 h-4" />
+                Admin
+              </Link>
+            </Button>
             <ThemeToggle />
             <Button variant="ghost" asChild className="hidden sm:flex">
               <Link to="/auth">Sign In</Link>
@@ -233,9 +239,15 @@ export default function Index() {
             </div>
             <span className="font-display font-bold text-gradient">Teacher's Desk</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2024 Teacher's Desk. Built with ❤️ for educators.
-          </p>
+          <div className="flex items-center gap-4">
+            <Link to="/admin/login" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+              <Shield className="w-4 h-4" />
+              Admin Portal
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              © 2024 Teacher's Desk. Built with ❤️ for educators.
+            </p>
+          </div>
         </div>
       </footer>
     </div>;
