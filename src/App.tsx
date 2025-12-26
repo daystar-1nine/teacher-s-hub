@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/RequireRole";
 import { RequireAdmin } from "@/components/RequireAdmin";
+import { RequireSchoolAdmin } from "@/components/RequireSchoolAdmin";
 import { CommandPalette } from "@/components/CommandPalette";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -13,6 +14,7 @@ import AdminAuth from "./pages/AdminAuth";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import SchoolAdminDashboard from "./pages/SchoolAdminDashboard";
 import Attendance from "./pages/Attendance";
 import Homework from "./pages/Homework";
 import Exams from "./pages/Exams";
@@ -55,10 +57,11 @@ const App = () => (
             
             {/* Admin-Only Routes - Protected by RequireAdmin */}
             <Route path="/admin-dashboard" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
+            <Route path="/school-admin-dashboard" element={<RequireSchoolAdmin><SchoolAdminDashboard /></RequireSchoolAdmin>} />
             <Route path="/schools" element={<RequireAdmin><SchoolManagement /></RequireAdmin>} />
             <Route path="/activity-logs" element={<RequireAdmin><ActivityLogs /></RequireAdmin>} />
-            <Route path="/health-report" element={<RequireAdmin><SchoolHealthReport /></RequireAdmin>} />
-            <Route path="/settings" element={<RequireAdmin><SchoolSettings /></RequireAdmin>} />
+            <Route path="/health-report" element={<RequireSchoolAdmin><SchoolHealthReport /></RequireSchoolAdmin>} />
+            <Route path="/settings" element={<RequireSchoolAdmin><SchoolSettings /></RequireSchoolAdmin>} />
             
             {/* Shared Routes (Teacher & Admin) */}
             <Route path="/attendance" element={<RequireAuth><Attendance /></RequireAuth>} />
