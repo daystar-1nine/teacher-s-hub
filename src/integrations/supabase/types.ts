@@ -1047,10 +1047,19 @@ export type Database = {
           school_code: string
         }[]
       }
+      get_user_app_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_profile_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_school_code: { Args: { _user_id: string }; Returns: string }
       has_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
