@@ -1,10 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'teacher' | 'student';
-// NOTE: Admin role is handled separately via AdminAuthContext
-// This AppRole is kept for backwards compatibility but admin signup is blocked
 export type AppRole = 'admin' | 'teacher' | 'student';
 
 export interface Profile {
@@ -49,15 +47,62 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session cache for faster initial load
+const SESSION_CACHE_KEY = 'auth_session_cache';
+
+function getCachedSession(): { user: User | null; session: Session | null } | null {
+  try {
+    const cached = sessionStorage.getItem(SESSION_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Check if cache is still valid (less than 5 minutes old)
+      if (parsed.timestamp && Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+        return { user: parsed.user, session: parsed.session };
+      }
+    }
+  } catch {
+    // Ignore cache errors
+  }
+  return null;
+}
+
+function setCachedSession(user: User | null, session: Session | null) {
+  try {
+    sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+      user,
+      session,
+      timestamp: Date.now(),
+    }));
+  } catch {
+    // Ignore cache errors
+  }
+}
+
+function clearCachedSession() {
+  try {
+    sessionStorage.removeItem(SESSION_CACHE_KEY);
+  } catch {
+    // Ignore cache errors
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  // Use cached session for instant UI
+  const cachedSession = useMemo(() => getCachedSession(), []);
+  
+  const [user, setUser] = useState<User | null>(cachedSession?.user ?? null);
+  const [session, setSession] = useState<Session | null>(cachedSession?.session ?? null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userRoleData, setUserRoleData] = useState<UserRoleData | null>(null);
   const [appRole, setAppRole] = useState<AppRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!cachedSession); // Skip loading if cached
+  
+  // Track if we've already fetched user data to prevent duplicates
+  const fetchedUserIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
+  // Memoized fetch functions to prevent re-creation
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -75,9 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error in fetchProfile:', error);
       return null;
     }
-  };
+  }, []);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string): Promise<UserRoleData | null> => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -95,70 +140,114 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error in fetchUserRole:', error);
       return null;
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
-    if (user) {
+  // Fetch user data only once per user
+  const fetchUserData = useCallback(async (userId: string, force = false) => {
+    // Prevent duplicate fetches
+    if (!force && (fetchedUserIdRef.current === userId || isFetchingRef.current)) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
+    
+    try {
+      // Parallel fetch for performance
       const [profileData, roleData] = await Promise.all([
-        fetchProfile(user.id),
-        fetchUserRole(user.id)
+        fetchProfile(userId),
+        fetchUserRole(userId)
       ]);
+      
       setProfile(profileData);
       setUserRoleData(roleData);
       setAppRole(roleData?.role || null);
+      fetchedUserIdRef.current = userId;
+    } finally {
+      isFetchingRef.current = false;
     }
-  };
+  }, [fetchProfile, fetchUserRole]);
 
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchUserData(user.id, true);
+    }
+  }, [user, fetchUserData]);
+
+  // Auth state initialization - optimized to prevent double fetches
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, newSession) => {
+        if (!mounted) return;
         
-        // Defer data fetch with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(async () => {
-            const [profileData, roleData] = await Promise.all([
-              fetchProfile(session.user.id),
-              fetchUserRole(session.user.id)
-            ]);
-            setProfile(profileData);
-            setUserRoleData(roleData);
-            setAppRole(roleData?.role || null);
+        // Update session immediately (sync)
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setCachedSession(newSession?.user ?? null, newSession);
+        
+        if (newSession?.user) {
+          // Defer data fetch to avoid deadlock - use setTimeout(0)
+          setTimeout(() => {
+            if (mounted) {
+              fetchUserData(newSession.user.id);
+              setIsLoading(false);
+            }
           }, 0);
         } else {
+          // Clear all data on logout
           setProfile(null);
           setUserRoleData(null);
           setAppRole(null);
+          fetchedUserIdRef.current = null;
+          clearCachedSession();
+          setIsLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const [profileData, roleData] = await Promise.all([
-          fetchProfile(session.user.id),
-          fetchUserRole(session.user.id)
-        ]);
-        setProfile(profileData);
-        setUserRoleData(roleData);
-        setAppRole(roleData?.role || null);
-      }
-      
-      setIsLoading(false);
-    });
+    // THEN check for existing session (only if not cached)
+    if (!cachedSession) {
+      supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+        if (!mounted) return;
+        
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+        setCachedSession(existingSession?.user ?? null, existingSession);
+        
+        if (existingSession?.user) {
+          await fetchUserData(existingSession.user.id);
+        }
+        
+        setIsLoading(false);
+      });
+    } else {
+      // Use cached session, but validate in background
+      supabase.auth.getSession().then(({ data: { session: validSession } }) => {
+        if (!mounted) return;
+        
+        if (validSession?.user) {
+          fetchUserData(validSession.user.id);
+        } else if (!validSession && cachedSession) {
+          // Cache was stale, clear it
+          setUser(null);
+          setSession(null);
+          clearCachedSession();
+        }
+      });
+    }
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [cachedSession, fetchUserData]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  // Memoized login function
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -172,9 +261,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Login error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
-  };
+  }, []);
 
-  const signup = async (
+  // Memoized signup function
+  const signup = useCallback(async (
     email: string, 
     password: string, 
     name: string, 
@@ -183,7 +273,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       // SECURITY: Block admin signup via public form
-      // Admins MUST be created by super admins through the admin portal
       if (role === 'admin') {
         return { 
           success: false, 
@@ -204,17 +293,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const redirectUrl = `${window.location.origin}/`;
 
-      // Only allow teacher or student roles
-      const profileRole: UserRole = role === 'teacher' ? 'teacher' : 'student';
-
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
             name,
-            role: role, // This goes to user_roles table via trigger
+            role: role,
             school_code: schoolCode.toUpperCase(),
           },
         },
@@ -232,18 +318,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Signup error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  // Memoized logout function
+  const logout = useCallback(async () => {
+    clearCachedSession();
+    fetchedUserIdRef.current = null;
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setProfile(null);
     setUserRoleData(null);
     setAppRole(null);
-  };
+  }, []);
 
-  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+  // Memoized resetPassword function
+  const resetPassword = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth?mode=reset`,
@@ -258,9 +348,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Reset password error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
-  };
+  }, []);
 
-  const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+  // Memoized updatePassword function
+  const updatePassword = useCallback(async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
@@ -275,27 +366,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Update password error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
-  };
+  }, []);
+
+  // CRITICAL: Memoize context value to prevent re-renders
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    profile,
+    appRole,
+    userRoleData,
+    isLoading,
+    isAuthenticated: !!user,
+    isAdmin: appRole === 'admin',
+    isTeacher: appRole === 'teacher',
+    isStudent: appRole === 'student',
+    login,
+    signup,
+    logout,
+    refreshProfile,
+    resetPassword,
+    updatePassword,
+  }), [
+    user, 
+    session, 
+    profile, 
+    appRole, 
+    userRoleData, 
+    isLoading, 
+    login, 
+    signup, 
+    logout, 
+    refreshProfile, 
+    resetPassword, 
+    updatePassword
+  ]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      profile,
-      appRole,
-      userRoleData,
-      isLoading,
-      isAuthenticated: !!user,
-      isAdmin: appRole === 'admin',
-      isTeacher: appRole === 'teacher',
-      isStudent: appRole === 'student',
-      login,
-      signup,
-      logout,
-      refreshProfile,
-      resetPassword,
-      updatePassword,
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,99 +1,169 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { GraduationCap, Mail, Lock, User, Building2, Eye, EyeOff, Loader2, ArrowLeft, KeyRound } from 'lucide-react';
 
+// Memoized loading skeleton for instant feedback
+const AuthLoadingSkeleton = memo(() => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 rounded-full gradient-primary animate-pulse" />
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+));
+AuthLoadingSkeleton.displayName = 'AuthLoadingSkeleton';
+
+// Memoized role loading state
+const RoleLoadingSkeleton = memo(() => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <p className="text-muted-foreground">Setting up your account...</p>
+    </div>
+  </div>
+));
+RoleLoadingSkeleton.displayName = 'RoleLoadingSkeleton';
+
+// Memoized background component to prevent re-renders
+const AuthBackground = memo(() => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/10 blur-3xl" />
+    <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent/10 blur-3xl" />
+  </div>
+));
+AuthBackground.displayName = 'AuthBackground';
+
+// Memoized logo component
+const AuthLogo = memo(({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle: string }) => (
+  <div className="flex flex-col items-center mb-8 animate-slide-up">
+    <div className="w-16 h-16 rounded-2xl gradient-primary shadow-glow flex items-center justify-center mb-4">
+      <Icon className="w-9 h-9 text-primary-foreground" />
+    </div>
+    <h1 className="text-3xl font-bold text-foreground">{title}</h1>
+    <p className="text-muted-foreground mt-1">{subtitle}</p>
+  </div>
+));
+AuthLogo.displayName = 'AuthLogo';
+
+// Password input with toggle - memoized
+const PasswordInput = memo(({ 
+  id, 
+  value, 
+  onChange, 
+  placeholder = '••••••••',
+  disabled = false,
+  showPassword,
+  onToggleShow
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  showPassword: boolean;
+  onToggleShow: () => void;
+}) => (
+  <div className="relative">
+    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+    <Input
+      id={id}
+      type={showPassword ? 'text' : 'password'}
+      placeholder={placeholder}
+      className="pl-10 pr-10"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+    />
+    <button
+      type="button"
+      onClick={onToggleShow}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+    >
+      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    </button>
+  </div>
+));
+PasswordInput.displayName = 'PasswordInput';
+
 const Auth = () => {
   const { login, signup, resetPassword, updatePassword, isAuthenticated, isLoading: authLoading, appRole } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showResetPassword, setShowResetPassword] = useState(false);
   
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  
-  // Signup form state
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupName, setSignupName] = useState('');
-  const [signupRole, setSignupRole] = useState<AppRole>('student');
-  const [signupSchoolCode, setSignupSchoolCode] = useState('');
+  // Consolidated form state to reduce re-renders
+  const [formState, setFormState] = useState({
+    showPassword: false,
+    isSubmitting: false,
+    showForgotPassword: false,
+    showResetPassword: false,
+    // Login
+    loginEmail: '',
+    loginPassword: '',
+    // Signup
+    signupEmail: '',
+    signupPassword: '',
+    signupName: '',
+    signupRole: 'student' as AppRole,
+    signupSchoolCode: '',
+    // Reset
+    resetEmail: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
-  // Reset password state
-  const [resetEmail, setResetEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  // Memoized state updater
+  const updateFormState = useCallback((updates: Partial<typeof formState>) => {
+    setFormState(prev => ({ ...prev, ...updates }));
+  }, []);
 
   // Check if this is a password reset callback
   useEffect(() => {
     const mode = searchParams.get('mode');
     if (mode === 'reset') {
-      setShowResetPassword(true);
+      updateFormState({ showResetPassword: true });
     }
-  }, [searchParams]);
+  }, [searchParams, updateFormState]);
 
+  // Early return for loading state
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full gradient-primary animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoadingSkeleton />;
   }
 
   // Redirect based on role after authentication
   if (isAuthenticated && appRole) {
-    // SECURITY: Redirect admins to admin portal - they should NOT use this login
     if (appRole === 'admin') {
       return <Navigate to="/admin/login" replace />;
     }
-    
-    const redirectPath = 
-      appRole === 'teacher' ? '/teacher-dashboard' :
-      '/student-dashboard';
+    const redirectPath = appRole === 'teacher' ? '/teacher-dashboard' : '/student-dashboard';
     return <Navigate to={redirectPath} replace />;
   }
 
   if (isAuthenticated && !appRole) {
-    // Still loading role, wait
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Setting up your account...</p>
-        </div>
-      </div>
-    );
+    return <RoleLoadingSkeleton />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!loginEmail || !loginPassword) {
+    if (!formState.loginEmail || !formState.loginPassword) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    setIsSubmitting(true);
-    const result = await login(loginEmail, loginPassword);
-    setIsSubmitting(false);
+    updateFormState({ isSubmitting: true });
+    const result = await login(formState.loginEmail, formState.loginPassword);
+    updateFormState({ isSubmitting: false });
     
     if (result.success) {
       toast.success('Welcome back!');
-      // Navigation will happen automatically via the isAuthenticated check
     } else {
       toast.error(result.error || 'Login failed');
     }
@@ -101,6 +171,8 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const { signupEmail, signupPassword, signupName, signupSchoolCode, signupRole } = formState;
     
     if (!signupEmail || !signupPassword || !signupName || !signupSchoolCode) {
       toast.error('Please fill in all fields');
@@ -112,13 +184,12 @@ const Auth = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    updateFormState({ isSubmitting: true });
     const result = await signup(signupEmail, signupPassword, signupName, signupRole, signupSchoolCode);
-    setIsSubmitting(false);
+    updateFormState({ isSubmitting: false });
     
     if (result.success) {
       toast.success('Account created successfully!');
-      // Navigation will happen automatically via the isAuthenticated check
     } else {
       toast.error(result.error || 'Signup failed');
     }
@@ -127,19 +198,18 @@ const Auth = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!resetEmail) {
+    if (!formState.resetEmail) {
       toast.error('Please enter your email');
       return;
     }
 
-    setIsSubmitting(true);
-    const result = await resetPassword(resetEmail);
-    setIsSubmitting(false);
+    updateFormState({ isSubmitting: true });
+    const result = await resetPassword(formState.resetEmail);
+    updateFormState({ isSubmitting: false });
     
     if (result.success) {
       toast.success('Password reset email sent! Check your inbox.');
-      setShowForgotPassword(false);
-      setResetEmail('');
+      updateFormState({ showForgotPassword: false, resetEmail: '' });
     } else {
       toast.error(result.error || 'Failed to send reset email');
     }
@@ -147,6 +217,8 @@ const Auth = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const { newPassword, confirmPassword } = formState;
     
     if (!newPassword || !confirmPassword) {
       toast.error('Please fill in all fields');
@@ -163,61 +235,44 @@ const Auth = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    updateFormState({ isSubmitting: true });
     const result = await updatePassword(newPassword);
-    setIsSubmitting(false);
+    updateFormState({ isSubmitting: false });
     
     if (result.success) {
       toast.success('Password updated successfully!');
-      setShowResetPassword(false);
+      updateFormState({ showResetPassword: false });
       navigate('/auth');
     } else {
       toast.error(result.error || 'Failed to update password');
     }
   };
 
+  const togglePasswordVisibility = () => {
+    updateFormState({ showPassword: !formState.showPassword });
+  };
+
   // Show reset password form if coming from email link
-  if (showResetPassword) {
+  if (formState.showResetPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent/10 blur-3xl" />
-        </div>
-
+        <AuthBackground />
         <div className="w-full max-w-md relative z-10">
-          <div className="flex flex-col items-center mb-8 animate-slide-up">
-            <div className="w-16 h-16 rounded-2xl gradient-primary shadow-glow flex items-center justify-center mb-4">
-              <KeyRound className="w-9 h-9 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground">Set New Password</h1>
-            <p className="text-muted-foreground mt-1">Enter your new password below</p>
-          </div>
-
+          <AuthLogo icon={KeyRound} title="Set New Password" subtitle="Enter your new password below" />
           <Card variant="elevated" className="animate-scale-in">
             <CardContent className="pt-6">
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="new-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Min 6 characters"
-                      className="pl-10 pr-10"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <PasswordInput
+                    id="new-password"
+                    value={formState.newPassword}
+                    onChange={(val) => updateFormState({ newPassword: val })}
+                    placeholder="Min 6 characters"
+                    disabled={formState.isSubmitting}
+                    showPassword={formState.showPassword}
+                    onToggleShow={togglePasswordVisibility}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -226,18 +281,18 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="confirm-password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={formState.showPassword ? 'text' : 'password'}
                       placeholder="Confirm your password"
                       className="pl-10"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isSubmitting}
+                      value={formState.confirmPassword}
+                      onChange={(e) => updateFormState({ confirmPassword: e.target.value })}
+                      disabled={formState.isSubmitting}
                     />
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button type="submit" className="w-full" variant="gradient" disabled={formState.isSubmitting}>
+                  {formState.isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Updating...
@@ -255,23 +310,12 @@ const Auth = () => {
   }
 
   // Show forgot password form
-  if (showForgotPassword) {
+  if (formState.showForgotPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent/10 blur-3xl" />
-        </div>
-
+        <AuthBackground />
         <div className="w-full max-w-md relative z-10">
-          <div className="flex flex-col items-center mb-8 animate-slide-up">
-            <div className="w-16 h-16 rounded-2xl gradient-primary shadow-glow flex items-center justify-center mb-4">
-              <Mail className="w-9 h-9 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground">Reset Password</h1>
-            <p className="text-muted-foreground mt-1">We'll send you a reset link</p>
-          </div>
-
+          <AuthLogo icon={Mail} title="Reset Password" subtitle="We'll send you a reset link" />
           <Card variant="elevated" className="animate-scale-in">
             <CardContent className="pt-6">
               <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -284,15 +328,15 @@ const Auth = () => {
                       type="email"
                       placeholder="you@school.edu"
                       className="pl-10"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      disabled={isSubmitting}
+                      value={formState.resetEmail}
+                      onChange={(e) => updateFormState({ resetEmail: e.target.value })}
+                      disabled={formState.isSubmitting}
                     />
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button type="submit" className="w-full" variant="gradient" disabled={formState.isSubmitting}>
+                  {formState.isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Sending...
@@ -306,7 +350,7 @@ const Auth = () => {
                   type="button" 
                   variant="ghost" 
                   className="w-full" 
-                  onClick={() => setShowForgotPassword(false)}
+                  onClick={() => updateFormState({ showForgotPassword: false })}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Login
@@ -321,21 +365,9 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent/10 blur-3xl" />
-      </div>
-
+      <AuthBackground />
       <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8 animate-slide-up">
-          <div className="w-16 h-16 rounded-2xl gradient-primary shadow-glow flex items-center justify-center mb-4">
-            <GraduationCap className="w-9 h-9 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Teacher's Desk</h1>
-          <p className="text-muted-foreground mt-1">Your Complete Education Platform</p>
-        </div>
+        <AuthLogo icon={GraduationCap} title="Teacher's Desk" subtitle="Your Complete Education Platform" />
 
         <Card variant="elevated" className="animate-scale-in">
           <Tabs defaultValue="login" className="w-full">
@@ -362,9 +394,9 @@ const Auth = () => {
                         type="email"
                         placeholder="you@school.edu"
                         className="pl-10"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        disabled={isSubmitting}
+                        value={formState.loginEmail}
+                        onChange={(e) => updateFormState({ loginEmail: e.target.value })}
+                        disabled={formState.isSubmitting}
                       />
                     </div>
                   </div>
@@ -374,35 +406,24 @@ const Auth = () => {
                       <Label htmlFor="login-password">Password</Label>
                       <button
                         type="button"
-                        onClick={() => setShowForgotPassword(true)}
+                        onClick={() => updateFormState({ showForgotPassword: true })}
                         className="text-xs text-primary hover:underline"
                       >
                         Forgot password?
                       </button>
                     </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="pl-10 pr-10"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      id="login-password"
+                      value={formState.loginPassword}
+                      onChange={(val) => updateFormState({ loginPassword: val })}
+                      disabled={formState.isSubmitting}
+                      showPassword={formState.showPassword}
+                      onToggleShow={togglePasswordVisibility}
+                    />
                   </div>
 
-                  <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
-                    {isSubmitting ? (
+                  <Button type="submit" className="w-full" variant="gradient" disabled={formState.isSubmitting}>
+                    {formState.isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Signing in...
@@ -429,9 +450,9 @@ const Auth = () => {
                         type="text"
                         placeholder="John Doe"
                         className="pl-10"
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        disabled={isSubmitting}
+                        value={formState.signupName}
+                        onChange={(e) => updateFormState({ signupName: e.target.value })}
+                        disabled={formState.isSubmitting}
                       />
                     </div>
                   </div>
@@ -445,34 +466,24 @@ const Auth = () => {
                         type="email"
                         placeholder="you@school.edu"
                         className="pl-10"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        disabled={isSubmitting}
+                        value={formState.signupEmail}
+                        onChange={(e) => updateFormState({ signupEmail: e.target.value })}
+                        disabled={formState.isSubmitting}
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Min 6 characters"
-                        className="pl-10 pr-10"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      id="signup-password"
+                      value={formState.signupPassword}
+                      onChange={(val) => updateFormState({ signupPassword: val })}
+                      placeholder="Min 6 characters"
+                      disabled={formState.isSubmitting}
+                      showPassword={formState.showPassword}
+                      onToggleShow={togglePasswordVisibility}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -482,42 +493,35 @@ const Auth = () => {
                       <Input
                         id="signup-school"
                         type="text"
-                        placeholder="Enter your school code"
+                        placeholder="e.g., DEMO2024"
                         className="pl-10 uppercase"
-                        value={signupSchoolCode}
-                        onChange={(e) => setSignupSchoolCode(e.target.value.toUpperCase())}
-                        disabled={isSubmitting}
+                        value={formState.signupSchoolCode}
+                        onChange={(e) => updateFormState({ signupSchoolCode: e.target.value.toUpperCase() })}
+                        disabled={formState.isSubmitting}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Ask your school administrator for the school code
-                    </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label>I am a</Label>
-                    <RadioGroup
-                      value={signupRole}
-                      onValueChange={(value) => setSignupRole(value as AppRole)}
+                    <RadioGroup 
+                      value={formState.signupRole} 
+                      onValueChange={(val) => updateFormState({ signupRole: val as AppRole })}
                       className="flex gap-4"
-                      disabled={isSubmitting}
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="student" id="role-student" />
-                        <Label htmlFor="role-student" className="cursor-pointer">Student</Label>
+                        <RadioGroupItem value="student" id="student" />
+                        <Label htmlFor="student" className="font-normal cursor-pointer">Student</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="teacher" id="role-teacher" />
-                        <Label htmlFor="role-teacher" className="cursor-pointer">Teacher</Label>
+                        <RadioGroupItem value="teacher" id="teacher" />
+                        <Label htmlFor="teacher" className="font-normal cursor-pointer">Teacher</Label>
                       </div>
                     </RadioGroup>
-                    <p className="text-xs text-muted-foreground">
-                      Admin? <a href="/admin/login" className="text-primary hover:underline">Use the admin portal</a>
-                    </p>
                   </div>
 
-                  <Button type="submit" className="w-full" variant="gradient" disabled={isSubmitting}>
-                    {isSubmitting ? (
+                  <Button type="submit" className="w-full" variant="gradient" disabled={formState.isSubmitting}>
+                    {formState.isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Creating account...
@@ -533,7 +537,7 @@ const Auth = () => {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          By signing in, you agree to our Terms of Service and Privacy Policy.
+          By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
     </div>
