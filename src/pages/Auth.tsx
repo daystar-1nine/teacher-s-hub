@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, forwardRef } from 'react';
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -53,16 +53,8 @@ const AuthLogo = memo(({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
 ));
 AuthLogo.displayName = 'AuthLogo';
 
-// Password input with toggle - memoized
-const PasswordInput = memo(({ 
-  id, 
-  value, 
-  onChange, 
-  placeholder = '••••••••',
-  disabled = false,
-  showPassword,
-  onToggleShow
-}: {
+// Password input with toggle - properly using forwardRef
+interface PasswordInputProps {
   id: string;
   value: string;
   onChange: (value: string) => void;
@@ -70,26 +62,31 @@ const PasswordInput = memo(({
   disabled?: boolean;
   showPassword: boolean;
   onToggleShow: () => void;
-}) => (
-  <div className="relative">
-    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-    <Input
-      id={id}
-      type={showPassword ? 'text' : 'password'}
-      placeholder={placeholder}
-      className="pl-10 pr-10"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-    />
-    <button
-      type="button"
-      onClick={onToggleShow}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-    >
-      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  </div>
+}
+
+const PasswordInput = memo(forwardRef<HTMLInputElement, PasswordInputProps>(
+  ({ id, value, onChange, placeholder = '••••••••', disabled = false, showPassword, onToggleShow }, ref) => (
+    <div className="relative">
+      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <Input
+        ref={ref}
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        placeholder={placeholder}
+        className="pl-10 pr-10"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        onClick={onToggleShow}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  )
 ));
 PasswordInput.displayName = 'PasswordInput';
 
