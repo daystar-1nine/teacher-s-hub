@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminDashboardStats } from '@/hooks/useAdminDashboardStats';
 import { InviteTeacherDialog } from '@/components/admin/InviteTeacherDialog';
 import { RoleManagementDialog } from '@/components/admin/RoleManagementDialog';
+import { CreateAdminDialog } from '@/components/admin/CreateAdminDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -29,11 +30,25 @@ import {
   ArrowRight,
   Mail,
   UserCog,
+  ShieldPlus,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { stats, recentActivity, isLoading } = useAdminDashboardStats();
+
+  // Check if current user is a super admin
+  const { data: adminProfile } = useQuery({
+    queryKey: ['admin-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.rpc('get_admin_profile');
+      return data?.[0] || null;
+    },
+    enabled: !!user?.id,
+  });
+
+  const isSuperAdmin = adminProfile?.is_super_admin ?? false;
 
   // Fetch school name
   const { data: school } = useQuery({
@@ -204,6 +219,14 @@ export default function AdminDashboard() {
                     <span className="text-sm">Manage Roles</span>
                   </Button>
                 </RoleManagementDialog>
+
+                {/* Create Admin Button (for super admins or admins) */}
+                <CreateAdminDialog isSuperAdmin={isSuperAdmin}>
+                  <Button variant="destructive" className="h-auto py-4 flex-col gap-2">
+                    <ShieldPlus className="w-5 h-5" />
+                    <span className="text-sm">Create Admin</span>
+                  </Button>
+                </CreateAdminDialog>
               </div>
             </CardContent>
           </Card>
