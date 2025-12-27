@@ -144,8 +144,9 @@ const Auth = () => {
 
   // Redirect based on role after authentication
   if (isAuthenticated && appRole) {
+    // Admins should use the admin portal at /admin/login - redirect them to their dashboard
     if (appRole === 'admin') {
-      return <Navigate to="/admin/login" replace />;
+      return <Navigate to="/admin-dashboard" replace />;
     }
     const redirectPath = appRole === 'teacher' ? '/teacher-dashboard' : '/student-dashboard';
     return <Navigate to={redirectPath} replace />;
